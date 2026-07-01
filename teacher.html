@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EICT Online — Teacher Dashboard (Private)</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --bg: #F2F7F8;
+    --surface: #FFFFFF;
+    --surface-soft: #EAF3F4;
+    --border: #DCE6E8;
+    --ink: #16242E;
+    --ink-soft: #5C7080;
+    --primary: #1E4E8C;
+    --primary-soft: #E7EFFA;
+    --teal: #2BA89A;
+    --teal-soft: #E3F5F2;
+    --amber: #F2A93B;
+    --amber-soft: #FDF2DF;
+    --green: #3FA66B;
+    --red: #D9534F;
+    --red-soft: #FBEAE9;
+    --purple: #7C5CBF;
+    --purple-soft: #EFE9FA;
+    --shadow: 0 4px 18px rgba(20, 50, 70, 0.07);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;}
+  h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit; cursor:pointer;}
+  a{color:inherit;}
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen{
+    min-height:100vh; display:none; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 12% 18%, rgba(30,78,140,0.18), transparent 42%),
+      radial-gradient(circle at 88% 82%, rgba(124,92,191,0.14), transparent 45%),
+      var(--ink);
+    padding:24px;
+  }
+  .login-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.35); padding:44px 40px; width:100%; max-width:420px; text-align:center;
+  }
+  .badge-mark{
+    width:60px; height:60px; border-radius:16px; margin:0 auto 16px;
+    background:linear-gradient(135deg, var(--ink), var(--primary));
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-family:'Space Grotesk'; font-weight:700; font-size:20px;
+  }
+  .login-card h1{font-size:22px; color:var(--primary);}
+  .login-card p.tagline{color:var(--ink-soft); font-size:13px; margin:8px 0 26px; line-height:1.5;}
+  .field-label{display:block; text-align:left; font-size:12px; font-weight:600; color:var(--ink-soft); margin:14px 0 6px; text-transform:uppercase; letter-spacing:0.04em;}
+  .field-label:first-of-type{margin-top:0;}
+  input[type=text], input[type=email], input[type=password], input[type=number], select, textarea{
+    width:100%; padding:11px 13px; border-radius:10px; border:1.5px solid var(--border);
+    font-size:14px; font-family:'Inter'; background:#fbfdfd; color:var(--ink); transition:border-color .15s;
+  }
+  textarea{resize:vertical; min-height:64px;}
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--teal);}
+  .btn{
+    border:none; border-radius:10px; padding:11px 18px; font-weight:600; font-size:14px;
+    transition:transform .12s, box-shadow .12s; display:inline-flex; align-items:center; gap:7px; justify-content:center;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--primary); color:#fff;}
+  .btn-primary:hover{box-shadow:0 6px 16px rgba(30,78,140,0.28);}
+  .btn-teal{background:var(--teal); color:#fff;}
+  .btn-ghost{background:var(--surface-soft); color:var(--primary);}
+  .btn-red{background:var(--red-soft); color:var(--red);}
+  .btn-amber{background:var(--amber); color:#3a2a06;}
+  .btn-block{width:100%; margin-top:20px;}
+  .btn-sm{padding:7px 13px; font-size:12.5px; border-radius:8px;}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  .login-foot{margin-top:16px; font-size:11.5px; color:var(--ink-soft);}
+  .auth-error{display:none; background:var(--red-soft); color:var(--red); font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:14px; text-align:left;}
+
+  /* ---------- LOADING ---------- */
+  #loadingScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+    background:var(--ink); color:#9fb0bc; font-size:14px;
+  }
+  .spinner{width:34px; height:34px; border-radius:50%; border:3px solid #2a3a47; border-top-color:var(--teal); animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- APP SHELL ---------- */
+  #app{display:none; min-height:100vh;}
+  .shell{display:grid; grid-template-columns:240px 1fr; min-height:100vh;}
+  .sidebar{
+    background:var(--ink); color:#cfdbe2; padding:22px 16px; display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .brand{display:flex; align-items:center; gap:10px; padding:4px 8px 18px; border-bottom:1px solid #26363f; margin-bottom:8px;}
+  .brand .badge-mark{width:36px; height:36px; border-radius:10px; font-size:13px; margin:0;}
+  .brand-name{font-size:14.5px; font-weight:700; color:#fff; line-height:1.1;}
+  .brand-sub{font-size:10px; color:#F2A93B; text-transform:uppercase; letter-spacing:.08em; font-weight:700;}
+  .lock-notice{font-size:10.5px; color:#8296a3; line-height:1.5; padding:10px 8px 16px; border-bottom:1px solid #26363f; margin-bottom:12px;}
+  nav.navlist{display:flex; flex-direction:column; gap:3px;}
+  .navlist button{
+    background:none; border:none; text-align:left; padding:10px 12px; border-radius:9px;
+    font-size:13.5px; font-weight:500; color:#9fb0bc; display:flex; align-items:center; gap:10px; width:100%;
+    justify-content:space-between;
+  }
+  .navlist button .lft{display:flex; align-items:center; gap:10px;}
+  .navlist button .ic{font-size:16px;}
+  .navlist button:hover{background:#20303a; color:#fff;}
+  .navlist button.active{background:var(--primary); color:#fff; font-weight:700;}
+  .nav-count{background:var(--red); color:#fff; font-size:10px; font-weight:700; padding:1px 7px; border-radius:20px; min-width:18px; text-align:center;}
+  .sidebar-foot{margin-top:auto; padding-top:14px; border-top:1px solid #26363f;}
+  .teacher-mini{font-size:11.5px; color:#8296a3; padding:0 8px; word-break:break-all;}
+  .logout-link{display:block; margin-top:10px; font-size:11.5px; color:#9fb0bc; text-decoration:underline; cursor:pointer; padding:0 8px;}
+
+  .main{padding:26px 34px 60px; max-width:1240px;}
+  .topbar{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; gap:16px; flex-wrap:wrap;}
+  .topbar h2{font-size:23px; color:var(--ink);}
+  .topbar .sub{color:var(--ink-soft); font-size:13.5px; margin-top:4px;}
+
+  .view{display:none;}
+  .view.active{display:block; animation:fadeIn .2s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  .grid{display:grid; gap:16px;}
+  .grid-2{grid-template-columns:1fr 1fr;}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  .grid-6{grid-template-columns:repeat(6,1fr);}
+  @media(max-width:1000px){.grid-2,.grid-3,.grid-4,.grid-6{grid-template-columns:1fr 1fr;} .shell{grid-template-columns:1fr;} .sidebar{position:relative; height:auto;}}
+  @media(max-width:640px){.grid-2,.grid-3,.grid-4,.grid-6{grid-template-columns:1fr;}}
+
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);}
+  .card h3{font-size:15px; margin-bottom:14px; display:flex; align-items:center; gap:8px;}
+  .card h3 .ic{font-size:17px;}
+
+  .stat-box{text-align:center; padding:16px 8px;}
+  .stat-box .v{font-family:'JetBrains Mono'; font-size:24px; font-weight:700; color:var(--primary);}
+  .stat-box .v.warn{color:var(--amber);}
+  .stat-box .v.alert{color:var(--red);}
+  .stat-box .l{font-size:10.5px; color:var(--ink-soft); margin-top:4px; text-transform:uppercase; letter-spacing:.03em;}
+
+  .empty-note{font-size:13px; color:var(--ink-soft); text-align:center; padding:34px 14px; line-height:1.6;}
+
+  table.data{width:100%; border-collapse:collapse; font-size:13px;}
+  table.data th{text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:9px 10px; border-bottom:1.5px solid var(--border); white-space:nowrap;}
+  table.data td{padding:11px 10px; border-bottom:1px solid var(--border); vertical-align:middle;}
+  table.data tr:last-child td{border-bottom:none;}
+  .table-wrap{overflow-x:auto;}
+
+  .pill{display:inline-block; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap;}
+  .pill-live{background:var(--teal-soft); color:var(--teal);}
+  .pill-draft{background:#f1f3f4; color:#8a96a0;}
+  .pill-pending{background:var(--amber-soft); color:#a26a06;}
+  .pill-graded{background:var(--teal-soft); color:var(--teal);}
+  .pill-dup{background:var(--red-soft); color:var(--red);}
+
+  .row-actions{display:flex; gap:6px; flex-wrap:wrap;}
+
+  /* Modal (add/edit forms) */
+  .modal-overlay{display:none; position:fixed; inset:0; background:rgba(15,28,38,0.55); z-index:50; align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--surface); border-radius:18px; width:100%; max-width:560px; overflow:hidden; box-shadow:0 20px 50px rgba(10,30,45,0.3);}
+  .modal-head{padding:20px 24px; background:var(--primary-soft); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;}
+  .modal-head h3{font-size:16.5px; color:var(--primary);}
+  .modal-close{background:none; border:none; font-size:19px; color:var(--ink-soft); line-height:1;}
+  .modal-body{padding:22px 24px; display:flex; flex-direction:column; gap:2px; max-height:70vh; overflow-y:auto;}
+  .modal-foot{padding:16px 24px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px;}
+  .checkbox-row{display:flex; align-items:center; gap:8px; margin-top:16px;}
+  .checkbox-row input{width:auto;}
+  .checkbox-row label{font-size:13px; color:var(--ink); font-weight:600;}
+  .field-hint{font-size:11px; color:var(--ink-soft); margin-top:4px; line-height:1.4;}
+
+  /* Grading queue */
+  .queue-card{border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:12px; background:var(--surface);}
+  .queue-card .qhead{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:10px; flex-wrap:wrap;}
+  .queue-card .qstudent{font-weight:700; font-size:14.5px;}
+  .queue-card .qitem{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+  .queue-card .qform{display:grid; grid-template-columns:110px 1fr auto; gap:10px; align-items:flex-start; margin-top:10px;}
+  @media(max-width:700px){.queue-card .qform{grid-template-columns:1fr;}}
+
+  .avatar-sm{width:30px; height:30px; border-radius:50%; overflow:hidden; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex-shrink:0;}
+  .avatar-img{width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;}
+  .name-cell{display:flex; align-items:center; gap:9px;}
+
+  .dup-banner{background:var(--red-soft); border:1px solid #f0c9c7; border-radius:12px; padding:14px 16px; margin-bottom:16px; font-size:13px; color:var(--red);}
+  .dup-banner b{color:var(--ink);}
+
+  ::-webkit-scrollbar{height:8px; width:8px;}
+  ::-webkit-scrollbar-thumb{background:#cbd8dc; border-radius:8px;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOADING ================= -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div>Loading dashboard…</div>
+</div>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="badge-mark">E</div>
+    <h1>Teacher Dashboard</h1>
+    <p class="tagline">EICT Online · Private staff access only. Sign in with your teacher account to manage missions, study plans, and grade submissions.</p>
+    <label class="field-label">Email</label>
+    <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="username">
+    <label class="field-label">Password</label>
+    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn btn-primary btn-block" id="loginBtn">🔐 Sign In</button>
+    <div class="auth-error" id="authError"></div>
+    <p class="login-foot">This link is private — never share it with students. Students use the separate eict-online.html site.</p>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="badge-mark">E</div>
+        <div>
+          <div class="brand-name">EICT Online</div>
+          <div class="brand-sub">Teacher Dashboard</div>
+        </div>
+      </div>
+      <div class="lock-notice">🔒 Private staff area. Never share this link or file with students.</div>
+      <nav class="navlist" id="navlist">
+        <button data-view="overview" class="active"><span class="lft"><span class="ic">🏠</span> Overview</span></button>
+        <button data-view="missions"><span class="lft"><span class="ic">🗂️</span> Missions</span></button>
+        <button data-view="plans"><span class="lft"><span class="ic">📚</span> Study Plans</span></button>
+        <button data-view="rp"><span class="lft"><span class="ic">🏅</span> Ranking Papers</span></button>
+        <button data-view="store"><span class="lft"><span class="ic">🎬</span> Video Store</span></button>
+        <button data-view="grading"><span class="lft"><span class="ic">📝</span> Grade Submissions</span> <span class="nav-count" id="navGradingCount" style="display:none;">0</span></button>
+        <button data-view="students"><span class="lft"><span class="ic">🧑‍🎓</span> Students</span></button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="teacher-mini" id="teacherEmail">—</div>
+        <span class="logout-link" id="logoutLink">Sign out</span>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <!-- ---------- OVERVIEW ---------- -->
+      <section class="view active" id="view-overview">
+        <div class="topbar">
+          <div>
+            <h2>Overview</h2>
+            <div class="sub">A quick snapshot of the program right now.</div>
+          </div>
+        </div>
+        <div id="dupBannerWrap"></div>
+        <div class="card" id="overviewStats" style="text-align:center; margin-bottom:18px; display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:16px;"></div>
+        <div class="card">
+          <h3><span class="ic">📝</span> Oldest Pending Submissions</h3>
+          <div id="overviewQueuePreview"></div>
+        </div>
+      </section>
+
+      <!-- ---------- MISSIONS ---------- -->
+      <section class="view" id="view-missions">
+        <div class="topbar">
+          <div>
+            <h2>🗂️ Missions</h2>
+            <div class="sub">These appear in order on the student site. Draft missions are hidden from students until Published.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="addMissionBtn">+ Add Mission</button>
+        </div>
+        <div class="card table-wrap"><table class="data" id="missionsTable"></table></div>
+      </section>
+
+      <!-- ---------- STUDY PLANS ---------- -->
+      <section class="view" id="view-plans">
+        <div class="topbar">
+          <div>
+            <h2>📚 Study Plans</h2>
+            <div class="sub">8 plans that unlock progressively as students submit missions.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="addPlanBtn">+ Add Study Plan</button>
+        </div>
+        <div class="card table-wrap"><table class="data" id="plansTable"></table></div>
+      </section>
+
+      <!-- ---------- RANKING PAPERS ---------- -->
+      <section class="view" id="view-rp">
+        <div class="topbar">
+          <div>
+            <h2>🏅 Ranking Papers</h2>
+            <div class="sub">Appear alongside missions after the mission you assign. Don't block mission progress.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="addRPBtn">+ Add Ranking Paper</button>
+        </div>
+        <div class="card table-wrap"><table class="data" id="rpTable"></table></div>
+      </section>
+
+      <!-- ---------- VIDEO STORE ---------- -->
+      <section class="view" id="view-store">
+        <div class="topbar">
+          <div>
+            <h2>🎬 Video Store</h2>
+            <div class="sub">Bonus lesson videos students unlock by spending coins. Draft items are hidden from students until Published.</div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="addStoreBtn">+ Add Store Video</button>
+        </div>
+        <div class="card table-wrap"><table class="data" id="storeTable"></table></div>
+      </section>
+
+      <!-- ---------- GRADING ---------- -->
+      <section class="view" id="view-grading">
+        <div class="topbar">
+          <div>
+            <h2>📝 Grade Submissions</h2>
+            <div class="sub">Oldest submissions first. Saving a grade adds score-bonus XP automatically and marks it graded.</div>
+          </div>
+        </div>
+        <div id="gradingWrap"></div>
+      </section>
+
+      <!-- ---------- STUDENTS ---------- -->
+      <section class="view" id="view-students">
+        <div class="topbar">
+          <div>
+            <h2>🧑‍🎓 Students</h2>
+            <div class="sub">Everyone who has ever logged into the student site. Adjust XP or remove test/duplicate profiles here.</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="refreshStudentsBtn">↻ Refresh</button>
+        </div>
+        <div id="studentsDupWrap"></div>
+        <div class="card table-wrap"><table class="data" id="studentsTable"></table></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ---------- GENERIC ADD/EDIT FORM MODAL ---------- -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="formModalTitle">Add Item</h3>
+      <button class="modal-close" id="formModalCloseBtn">✕</button>
+    </div>
+    <div class="modal-body" id="formModalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" id="formCancelBtn">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="formSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PURCHASES MODAL ================= -->
+<div class="modal-overlay" id="purchasesModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="purchasesModalTitle">Purchase Log</h3>
+      <button class="modal-close" id="purchasesModalCloseBtn">✕</button>
+    </div>
+    <div class="modal-body" id="purchasesModalBody"></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('purchasesModal').classList.remove('show')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   EICT ONLINE — Teacher Dashboard (private, login-protected)
+   ============================================================ */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCuOviWnb_XuS7v9eR37ADH8K7Ps34lDRc",
+  authDomain: "eict-online-50-days-plan.firebaseapp.com",
+  projectId: "eict-online-50-days-plan",
+  storageBucket: "eict-online-50-days-plan.firebasestorage.app",
+  messagingSenderId: "729945269200",
+  appId: "1:729945269200:web:cd12dead6e2759ea780fd5"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let teacherUser = null;
+let MISSIONS = [];
+let STUDY_PLANS = [];
+let RANKING_PAPERS = [];
+let STORE_VIDEOS = [];
+let STUDENTS = [];
+let currentView = 'overview';
+let currentFormCollection = null;
+let currentFormId = null;
+
+/* ---------------- SCHEMAS for generic form modal ---------------- */
+const SCHEMAS = {
+  missions: [
+    {key:'order', label:'Order (sequence number)', type:'number', required:true, placeholder:'1'},
+    {key:'title', label:'Title', type:'text', required:true, placeholder:'Mission 01 — Networking Fundamentals'},
+    {key:'topic', label:'Topic', type:'text', placeholder:'OSI model, topologies, transmission media'},
+    {key:'deadline', label:'Deadline (informational text)', type:'text', placeholder:'Day 5'},
+    {key:'paperLink', label:'Paper — Google Drive link', type:'text', placeholder:'https://drive.google.com/...'},
+    {key:'videoLink', label:'Discussion video link', type:'text', placeholder:'https://drive.google.com/... or YouTube link'},
+    {key:'markingSchemeLink', label:'Marking scheme — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
+    {key:'markedAnswerSheetLink', label:'Marked answer sheet — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
+    {key:'code', label:'Mission code (revealed after video, unlocks next mission bonus)', type:'text', placeholder:'NETWORK24'},
+    {key:'active', label:'Published (visible to students)', type:'checkbox', default:true},
+  ],
+  studyPlans: [
+    {key:'order', label:'Order (1–8)', type:'number', required:true, placeholder:'1'},
+    {key:'title', label:'Title', type:'text', required:true, placeholder:'Study Plan 1 — Networking & Databases'},
+    {key:'description', label:'Description', type:'textarea', placeholder:'What this plan covers…'},
+    {key:'link', label:'Study plan — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
+    {key:'unlocksAfterMissionId', label:'Unlocks after mission', type:'select', optionsSource:'missions', placeholderOption:'— Unlocked from the start —'},
+    {key:'active', label:'Published (visible to students)', type:'checkbox', default:true},
+  ],
+  rankingPapers: [
+    {key:'order', label:'Order (sequence number)', type:'number', required:true, placeholder:'2'},
+    {key:'title', label:'Title', type:'text', required:true, placeholder:'Ranking Paper 1'},
+    {key:'topic', label:'Topic / coverage note', type:'text', placeholder:'Covers Missions 1–2'},
+    {key:'afterMissionId', label:'Appears after mission', type:'select', optionsSource:'missions', required:true},
+    {key:'deadline', label:'Deadline (informational text)', type:'text', placeholder:'Day 10'},
+    {key:'paperLink', label:'Paper — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
+    {key:'markingSchemeLink', label:'Marking scheme — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
+    {key:'active', label:'Published (visible to students)', type:'checkbox', default:true},
+  ],
+  store: [
+    {key:'order', label:'Order (sequence number)', type:'number', required:true, placeholder:'1'},
+    {key:'title', label:'Title', type:'text', required:true, placeholder:'Networking Deep Dive'},
+    {key:'description', label:'Description', type:'textarea', placeholder:'What this video covers…'},
+    {key:'videoLink', label:'Video — Drive/YouTube link', type:'text', placeholder:'https://drive.google.com/... or YouTube link'},
+    {key:'price', label:'Price (coins)', type:'number', required:true, placeholder:'150'},
+    {key:'active', label:'Published (visible to students)', type:'checkbox', default:true},
+  ],
+};
+const COLLECTION_LABELS = {missions:'Mission', studyPlans:'Study Plan', rankingPapers:'Ranking Paper', store:'Store Video'};
+
+/* ---------------- AUTH ---------------- */
+auth.onAuthStateChanged(async (user)=>{
+  if(user){
+    teacherUser = user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'flex';
+    document.getElementById('teacherEmail').textContent = user.email;
+    await loadAllContent();
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    renderAll();
+  } else {
+    teacherUser = null;
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+});
+
+document.getElementById('loginBtn').addEventListener('click', doLogin);
+document.getElementById('loginPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  const errBox = document.getElementById('authError');
+  errBox.style.display = 'none';
+  if(!email || !pw){ errBox.textContent = 'Enter both your email and password.'; errBox.style.display='block'; return; }
+  try{
+    await auth.signInWithEmailAndPassword(email, pw);
+  }catch(e){
+    errBox.textContent = friendlyAuthError(e);
+    errBox.style.display = 'block';
+  }
+}
+function friendlyAuthError(e){
+  const code = e && e.code || '';
+  if(code==='auth/wrong-password' || code==='auth/invalid-credential') return 'Incorrect email or password.';
+  if(code==='auth/user-not-found') return 'No teacher account found with that email.';
+  if(code==='auth/invalid-email') return 'That email address looks invalid.';
+  if(code==='auth/too-many-requests') return 'Too many attempts — wait a moment and try again.';
+  return e && e.message ? e.message : 'Sign-in failed. Please try again.';
+}
+document.getElementById('logoutLink').addEventListener('click', ()=>{ auth.signOut(); });
+
+/* ---------------- DATA LOADING ---------------- */
+async function loadCollectionAdmin(name){
+  try{
+    const snap = await db.collection(name).orderBy('order').get();
+    return snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }catch(e){
+    console.error('Failed to load '+name, e);
+    return [];
+  }
+}
+async function loadStudents(){
+  try{
+    const snap = await db.collection('students').get();
+    return snap.docs.map(d=>({_key:d.id, ...d.data()}));
+  }catch(e){ console.error(e); return []; }
+}
+async function loadAllContent(){
+  [MISSIONS, STUDY_PLANS, RANKING_PAPERS, STORE_VIDEOS, STUDENTS] = await Promise.all([
+    loadCollectionAdmin('missions'),
+    loadCollectionAdmin('studyPlans'),
+    loadCollectionAdmin('rankingPapers'),
+    loadCollectionAdmin('store'),
+    loadStudents(),
+  ]);
+}
+
+/* ---------------- nav ---------------- */
+document.getElementById('navlist').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-view]');
+  if(!btn) return;
+  document.querySelectorAll('#navlist button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentView = btn.dataset.view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+currentView).classList.add('active');
+  renderView(currentView);
+});
+
+function renderAll(){
+  renderOverview();
+  renderMissionsTable();
+  renderPlansTable();
+  renderRPTable();
+  renderStoreTable();
+  renderGrading();
+  renderStudents();
+}
+function renderView(name){
+  if(name==='overview') renderOverview();
+  if(name==='missions') renderMissionsTable();
+  if(name==='plans') renderPlansTable();
+  if(name==='rp') renderRPTable();
+  if(name==='store') renderStoreTable();
+  if(name==='grading') renderGrading();
+  if(name==='students') renderStudents();
+}
+
+/* ---------------- helpers ---------------- */
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+function missionTitleById(id){
+  const m = MISSIONS.find(x=>x.id===id);
+  return m ? m.title : (id ? '(deleted mission)' : '—');
+}
+function completedCount(s){
+  return Object.values(s.submissions||{}).filter(x=>x.submitted).length;
+}
+function currentStreak(s){
+  let c = 0;
+  for(const m of MISSIONS){
+    const sub = (s.submissions||{})[m.id];
+    if(sub && sub.submitted) c++; else break;
+  }
+  return c;
+}
+function pendingCountFor(s){
+  const a = Object.values(s.submissions||{}).filter(x=>x.submitted && x.status==='pending').length;
+  const b = Object.values(s.rpSubmissions||{}).filter(x=>x.submitted && x.status==='pending').length;
+  return a+b;
+}
+function totalMarks(s){
+  let sum = 0;
+  Object.values(s.submissions||{}).forEach(x=>{ if(x && x.status==='graded' && typeof x.score==='number') sum += x.score; });
+  Object.values(s.rpSubmissions||{}).forEach(x=>{ if(x && x.status==='graded' && typeof x.score==='number') sum += x.score; });
+  return sum;
+}
+function spentCoins(s){
+  return Object.values(s.purchases||{}).reduce((sum,x)=> sum + (x && x.purchased ? (x.price||0) : 0), 0);
+}
+function walletBalance(s){
+  return Math.max(0, (s.xp||0) - spentCoins(s));
+}
+function purchaseCountFor(s){
+  return Object.values(s.purchases||{}).filter(x=>x && x.purchased).length;
+}
+function storeTitleById(id){
+  const v = STORE_VIDEOS.find(x=>x.id===id);
+  return v ? v.title : '(deleted item)';
+}
+function avatarHTML(s){
+  const initial = s && s.name ? s.name.charAt(0).toUpperCase() : '?';
+  if(s && s.photoURL) return `<img class="avatar-img" src="${escapeAttr(s.photoURL)}" onerror="this.parentElement.textContent='${initial}'">`;
+  return initial;
+}
+async function saveStudentDoc(student){
+  const {_key, ...rest} = student;
+  await db.collection('students').doc(_key).set(rest);
+}
+
+/* ---------------- duplicate name detection ---------------- */
+function normalizeName(n){ return (n||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function levenshtein(a,b){
+  const dp = Array.from({length:a.length+1}, (_,i)=>[i, ...Array(b.length).fill(0)]);
+  for(let j=0;j<=b.length;j++) dp[0][j]=j;
+  for(let i=1;i<=a.length;i++){
+    for(let j=1;j<=b.length;j++){
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
+    }
+  }
+  return dp[a.length][b.length];
+}
+function findDuplicates(){
+  const pairs = [];
+  const flagged = new Set();
+  for(let i=0;i<STUDENTS.length;i++){
+    for(let j=i+1;j<STUDENTS.length;j++){
+      const a = normalizeName(STUDENTS[i].name), b = normalizeName(STUDENTS[j].name);
+      if(!a || !b) continue;
+      const dist = levenshtein(a,b);
+      if(dist<=2 && Math.max(a.length,b.length) >= 4){
+        pairs.push({a:STUDENTS[i], b:STUDENTS[j]});
+        flagged.add(STUDENTS[i]._key); flagged.add(STUDENTS[j]._key);
+      }
+    }
+  }
+  return {pairs, flagged};
+}
+
+/* ---------------- OVERVIEW ---------------- */
+function buildGradingQueue(){
+  const queue = [];
+  STUDENTS.forEach(s=>{
+    Object.entries(s.submissions||{}).forEach(([missionId,sub])=>{
+      if(sub.submitted && sub.status==='pending'){
+        queue.push({studentKey:s._key, studentName:s.name, kind:'mission', itemId:missionId, itemTitle:missionTitleById(missionId), link:sub.link, ts:sub.ts||0});
+      }
+    });
+    Object.entries(s.rpSubmissions||{}).forEach(([rpId,sub])=>{
+      if(sub.submitted && sub.status==='pending'){
+        const rp = RANKING_PAPERS.find(x=>x.id===rpId);
+        queue.push({studentKey:s._key, studentName:s.name, kind:'rp', itemId:rpId, itemTitle: rp ? rp.title : '(deleted ranking paper)', link:sub.link, ts:sub.ts||0});
+      }
+    });
+  });
+  queue.sort((a,b)=>a.ts-b.ts);
+  return queue;
+}
+
+function renderOverview(){
+  const queue = buildGradingQueue();
+  const navBadge = document.getElementById('navGradingCount');
+  if(queue.length>0){ navBadge.style.display='inline-block'; navBadge.textContent = queue.length; }
+  else { navBadge.style.display='none'; }
+
+  const {pairs} = findDuplicates();
+  const dupWrap = document.getElementById('dupBannerWrap');
+  if(pairs.length>0){
+    dupWrap.innerHTML = `<div class="dup-banner">⚠️ <b>${pairs.length} possible duplicate student${pairs.length>1?'s':''} found</b> — likely the same person logged in with slightly different spelling. Check the Students tab.<br>` +
+      pairs.map(p=>`• <b>${escapeHtml(p.a.name)}</b> and <b>${escapeHtml(p.b.name)}</b>`).join('<br>') + `</div>`;
+  } else {
+    dupWrap.innerHTML = '';
+  }
+
+  const publishedMissions = MISSIONS.filter(m=>m.active!==false).length;
+  document.getElementById('overviewStats').innerHTML = `
+    <div class="stat-box"><div class="v">${STUDENTS.length}</div><div class="l">Students</div></div>
+    <div class="stat-box"><div class="v">${publishedMissions}/${MISSIONS.length}</div><div class="l">Missions Published</div></div>
+    <div class="stat-box"><div class="v">${STUDY_PLANS.filter(p=>p.active!==false).length}</div><div class="l">Study Plans Live</div></div>
+    <div class="stat-box"><div class="v">${RANKING_PAPERS.filter(p=>p.active!==false).length}</div><div class="l">Ranking Papers Live</div></div>
+    <div class="stat-box"><div class="v">${STORE_VIDEOS.filter(p=>p.active!==false).length}</div><div class="l">Store Videos Live</div></div>
+    <div class="stat-box"><div class="v ${queue.length>0?'warn':''}">${queue.length}</div><div class="l">Pending Reviews</div></div>
+    <div class="stat-box"><div class="v ${pairs.length>0?'alert':''}">${pairs.length}</div><div class="l">Possible Duplicates</div></div>
+  `;
+
+  const preview = queue.slice(0,5);
+  const previewWrap = document.getElementById('overviewQueuePreview');
+  if(preview.length===0){
+    previewWrap.innerHTML = `<div class="empty-note">Nothing waiting for review right now.</div>`;
+  } else {
+    previewWrap.innerHTML = `<table class="data"><tr><th>Student</th><th>Item</th><th></th></tr>` +
+      preview.map(q=>`<tr>
+        <td>${escapeHtml(q.studentName)}</td>
+        <td>${escapeHtml(q.itemTitle)}</td>
+        <td><button class="btn btn-ghost btn-sm" data-goto-grading="1">Review →</button></td>
+      </tr>`).join('') + `</table>`;
+    previewWrap.querySelectorAll('[data-goto-grading]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelector('#navlist button[data-view="grading"]').click();
+      });
+    });
+  }
+}
+
+/* ---------------- MISSIONS TABLE ---------------- */
+function renderMissionsTable(){
+  const el = document.getElementById('missionsTable');
+  if(MISSIONS.length===0){
+    el.innerHTML = '';
+    el.parentElement.innerHTML = `<div class="empty-note">No missions yet. Click "+ Add Mission" above to publish your first one.</div>`;
+    return;
+  }
+  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Topic</th><th>Deadline</th><th>Status</th><th></th></tr>` +
+    MISSIONS.map(m=>`<tr>
+      <td class="mono">${m.order ?? '—'}</td>
+      <td><b>${escapeHtml(m.title)}</b></td>
+      <td>${escapeHtml(m.topic||'—')}</td>
+      <td>${escapeHtml(m.deadline||'—')}</td>
+      <td><span class="pill ${m.active!==false?'pill-live':'pill-draft'}">${m.active!==false?'Published':'Draft'}</span></td>
+      <td class="row-actions">
+        <button class="btn btn-ghost btn-sm" data-edit-mission="${m.id}">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-toggle-mission="${m.id}">${m.active!==false?'Unpublish':'Publish'}</button>
+        <button class="btn btn-red btn-sm" data-delete-mission="${m.id}">Delete</button>
+      </td>
+    </tr>`).join('');
+
+  el.querySelectorAll('[data-edit-mission]').forEach(b=>b.addEventListener('click', ()=>openItemForm('missions', MISSIONS.find(m=>m.id===b.dataset.editMission))));
+  el.querySelectorAll('[data-toggle-mission]').forEach(b=>b.addEventListener('click', ()=>togglePublish('missions', b.dataset.toggleMission)));
+  el.querySelectorAll('[data-delete-mission]').forEach(b=>b.addEventListener('click', ()=>deleteItem('missions', b.dataset.deleteMission, 'mission')));
+}
+document.getElementById('addMissionBtn').addEventListener('click', ()=>openItemForm('missions', null));
+
+/* ---------------- STUDY PLANS TABLE ---------------- */
+function renderPlansTable(){
+  const el = document.getElementById('plansTable');
+  if(STUDY_PLANS.length===0){
+    el.innerHTML = '';
+    el.parentElement.innerHTML = `<div class="empty-note">No study plans yet. Click "+ Add Study Plan" above.</div>`;
+    return;
+  }
+  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Unlocks After</th><th>Status</th><th></th></tr>` +
+    STUDY_PLANS.map(p=>`<tr>
+      <td class="mono">${p.order ?? '—'}</td>
+      <td><b>${escapeHtml(p.title)}</b></td>
+      <td>${escapeHtml(missionTitleById(p.unlocksAfterMissionId))}</td>
+      <td><span class="pill ${p.active!==false?'pill-live':'pill-draft'}">${p.active!==false?'Published':'Draft'}</span></td>
+      <td class="row-actions">
+        <button class="btn btn-ghost btn-sm" data-edit-plan="${p.id}">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-toggle-plan="${p.id}">${p.active!==false?'Unpublish':'Publish'}</button>
+        <button class="btn btn-red btn-sm" data-delete-plan="${p.id}">Delete</button>
+      </td>
+    </tr>`).join('');
+
+  el.querySelectorAll('[data-edit-plan]').forEach(b=>b.addEventListener('click', ()=>openItemForm('studyPlans', STUDY_PLANS.find(p=>p.id===b.dataset.editPlan))));
+  el.querySelectorAll('[data-toggle-plan]').forEach(b=>b.addEventListener('click', ()=>togglePublish('studyPlans', b.dataset.togglePlan)));
+  el.querySelectorAll('[data-delete-plan]').forEach(b=>b.addEventListener('click', ()=>deleteItem('studyPlans', b.dataset.deletePlan, 'study plan')));
+}
+document.getElementById('addPlanBtn').addEventListener('click', ()=>openItemForm('studyPlans', null));
+
+/* ---------------- RANKING PAPERS TABLE ---------------- */
+function renderRPTable(){
+  const el = document.getElementById('rpTable');
+  if(RANKING_PAPERS.length===0){
+    el.innerHTML = '';
+    el.parentElement.innerHTML = `<div class="empty-note">No ranking papers yet. Click "+ Add Ranking Paper" above.</div>`;
+    return;
+  }
+  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Appears After</th><th>Deadline</th><th>Status</th><th></th></tr>` +
+    RANKING_PAPERS.map(p=>`<tr>
+      <td class="mono">${p.order ?? '—'}</td>
+      <td><b>${escapeHtml(p.title)}</b></td>
+      <td>${escapeHtml(missionTitleById(p.afterMissionId))}</td>
+      <td>${escapeHtml(p.deadline||'—')}</td>
+      <td><span class="pill ${p.active!==false?'pill-live':'pill-draft'}">${p.active!==false?'Published':'Draft'}</span></td>
+      <td class="row-actions">
+        <button class="btn btn-ghost btn-sm" data-edit-rp="${p.id}">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-toggle-rp="${p.id}">${p.active!==false?'Unpublish':'Publish'}</button>
+        <button class="btn btn-red btn-sm" data-delete-rp="${p.id}">Delete</button>
+      </td>
+    </tr>`).join('');
+
+  el.querySelectorAll('[data-edit-rp]').forEach(b=>b.addEventListener('click', ()=>openItemForm('rankingPapers', RANKING_PAPERS.find(p=>p.id===b.dataset.editRp))));
+  el.querySelectorAll('[data-toggle-rp]').forEach(b=>b.addEventListener('click', ()=>togglePublish('rankingPapers', b.dataset.toggleRp)));
+  el.querySelectorAll('[data-delete-rp]').forEach(b=>b.addEventListener('click', ()=>deleteItem('rankingPapers', b.dataset.deleteRp, 'ranking paper')));
+}
+document.getElementById('addRPBtn').addEventListener('click', ()=>openItemForm('rankingPapers', null));
+
+/* ---------------- VIDEO STORE TABLE ---------------- */
+function renderStoreTable(){
+  const el = document.getElementById('storeTable');
+  if(STORE_VIDEOS.length===0){
+    el.innerHTML = '';
+    el.parentElement.innerHTML = `<div class="empty-note">No store videos yet. Click "+ Add Store Video" above to publish your first one.</div>`;
+    return;
+  }
+  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Price</th><th>Status</th><th></th></tr>` +
+    STORE_VIDEOS.map(v=>`<tr>
+      <td class="mono">${v.order ?? '—'}</td>
+      <td><b>${escapeHtml(v.title)}</b></td>
+      <td class="mono">🪙 ${v.price ?? 0}</td>
+      <td><span class="pill ${v.active!==false?'pill-live':'pill-draft'}">${v.active!==false?'Published':'Draft'}</span></td>
+      <td class="row-actions">
+        <button class="btn btn-ghost btn-sm" data-edit-store="${v.id}">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-toggle-store="${v.id}">${v.active!==false?'Unpublish':'Publish'}</button>
+        <button class="btn btn-red btn-sm" data-delete-store="${v.id}">Delete</button>
+      </td>
+    </tr>`).join('');
+
+  el.querySelectorAll('[data-edit-store]').forEach(b=>b.addEventListener('click', ()=>openItemForm('store', STORE_VIDEOS.find(v=>v.id===b.dataset.editStore))));
+  el.querySelectorAll('[data-toggle-store]').forEach(b=>b.addEventListener('click', ()=>togglePublish('store', b.dataset.toggleStore)));
+  el.querySelectorAll('[data-delete-store]').forEach(b=>b.addEventListener('click', ()=>deleteItem('store', b.dataset.deleteStore, 'store video')));
+}
+document.getElementById('addStoreBtn').addEventListener('click', ()=>openItemForm('store', null));
+
+/* ---------------- GENERIC FORM MODAL ---------------- */
+function openItemForm(collectionName, existingItem){
+  currentFormCollection = collectionName;
+  currentFormId = existingItem ? existingItem.id : null;
+  const schema = SCHEMAS[collectionName];
+  const label = COLLECTION_LABELS[collectionName];
+  document.getElementById('formModalTitle').textContent = (existingItem ? 'Edit ' : 'Add ') + label;
+
+  const body = document.getElementById('formModalBody');
+  body.innerHTML = schema.map(f=>{
+    const val = existingItem ? existingItem[f.key] : undefined;
+    if(f.type==='textarea'){
+      return `<label class="field-label">${f.label}${f.required?' *':''}</label>
+        <textarea id="field_${f.key}" placeholder="${escapeAttr(f.placeholder||'')}">${escapeHtml(val||'')}</textarea>`;
+    }
+    if(f.type==='select'){
+      const opts = MISSIONS.map(m=>`<option value="${escapeAttr(m.id)}" ${val===m.id?'selected':''}>${escapeHtml(m.title)}</option>`).join('');
+      const placeholderOpt = f.placeholderOption ? `<option value="" ${!val?'selected':''}>${escapeHtml(f.placeholderOption)}</option>` : `<option value="">— Select a mission —</option>`;
+      return `<label class="field-label">${f.label}${f.required?' *':''}</label>
+        <select id="field_${f.key}">${placeholderOpt}${opts}</select>`;
+    }
+    if(f.type==='checkbox'){
+      const checked = existingItem ? (val!==false) : (f.default!==false);
+      return `<div class="checkbox-row"><input type="checkbox" id="field_${f.key}" ${checked?'checked':''}><label for="field_${f.key}">${f.label}</label></div>`;
+    }
+    if(f.type==='number'){
+      return `<label class="field-label">${f.label}${f.required?' *':''}</label>
+        <input type="number" id="field_${f.key}" placeholder="${escapeAttr(f.placeholder||'')}" value="${val!==undefined && val!==null ? val : ''}">`;
+    }
+    return `<label class="field-label">${f.label}${f.required?' *':''}</label>
+      <input type="text" id="field_${f.key}" placeholder="${escapeAttr(f.placeholder||'')}" value="${escapeAttr(val||'')}">`;
+  }).join('');
+
+  body.querySelectorAll('input, textarea, select').forEach(el=>{
+    el.addEventListener('input', ()=>{ el.style.borderColor = ''; });
+    el.addEventListener('change', ()=>{ el.style.borderColor = ''; });
+  });
+
+  document.getElementById('formModal').classList.add('show');
+}
+document.getElementById('formModalCloseBtn').addEventListener('click', closeItemForm);
+document.getElementById('formCancelBtn').addEventListener('click', closeItemForm);
+document.getElementById('formModal').addEventListener('click', (e)=>{ if(e.target.id==='formModal') closeItemForm(); });
+function closeItemForm(){
+  document.getElementById('formModal').classList.remove('show');
+  currentFormCollection = null;
+  currentFormId = null;
+}
+
+document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
+  const schema = SCHEMAS[currentFormCollection];
+  const data = {};
+  let missingRequired = false;
+  for(const f of schema){
+    const el = document.getElementById('field_'+f.key);
+    if(f.type==='checkbox'){ data[f.key] = el.checked; continue; }
+    if(f.type==='number'){
+      const num = parseFloat(el.value);
+      data[f.key] = isNaN(num) ? null : num;
+      if(f.required && (el.value.trim()==='' || isNaN(num))){ el.style.borderColor='var(--red)'; missingRequired = true; }
+      continue;
+    }
+    const v = el.value.trim();
+    data[f.key] = v;
+    if(f.required && !v){ el.style.borderColor='var(--red)'; missingRequired = true; }
+  }
+  if(missingRequired){ alert('Please fill in all required fields (marked *).'); return; }
+
+  const saveBtn = document.getElementById('formSaveBtn');
+  saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+  try{
+    const col = db.collection(currentFormCollection);
+    if(currentFormId){ await col.doc(currentFormId).set(data); }
+    else { await col.add(data); }
+
+    if(currentFormCollection==='missions') MISSIONS = await loadCollectionAdmin('missions');
+    if(currentFormCollection==='studyPlans') STUDY_PLANS = await loadCollectionAdmin('studyPlans');
+    if(currentFormCollection==='rankingPapers') RANKING_PAPERS = await loadCollectionAdmin('rankingPapers');
+    if(currentFormCollection==='store') STORE_VIDEOS = await loadCollectionAdmin('store');
+
+    renderMissionsTable(); renderPlansTable(); renderRPTable(); renderStoreTable(); renderOverview();
+    closeItemForm();
+  }catch(e){
+    console.error(e);
+    const detail = (e && (e.code || e.message)) ? `\n\nDetails: ${e.code || ''} ${e.message || ''}`.trim() : '';
+    alert('Something went wrong saving this.' + detail + '\n\nIf this mentions "permissions", sign out and back in. Otherwise check your internet connection and try again.');
+  }finally{
+    saveBtn.disabled = false; saveBtn.textContent = 'Save';
+  }
+});
+
+async function togglePublish(collectionName, id){
+  const list = collectionName==='missions' ? MISSIONS : collectionName==='studyPlans' ? STUDY_PLANS : collectionName==='rankingPapers' ? RANKING_PAPERS : STORE_VIDEOS;
+  const item = list.find(x=>x.id===id);
+  if(!item) return;
+  const newActive = !(item.active!==false);
+  try{
+    await db.collection(collectionName).doc(id).update({active:newActive});
+    item.active = newActive;
+    renderMissionsTable(); renderPlansTable(); renderRPTable(); renderStoreTable(); renderOverview();
+  }catch(e){ console.error(e); alert('Could not update publish status — please try again.'); }
+}
+
+async function deleteItem(collectionName, id, label){
+  if(!confirm(`Delete this ${label} permanently? This cannot be undone.`)) return;
+  try{
+    await db.collection(collectionName).doc(id).delete();
+    if(collectionName==='missions') MISSIONS = MISSIONS.filter(x=>x.id!==id);
+    if(collectionName==='studyPlans') STUDY_PLANS = STUDY_PLANS.filter(x=>x.id!==id);
+    if(collectionName==='rankingPapers') RANKING_PAPERS = RANKING_PAPERS.filter(x=>x.id!==id);
+    if(collectionName==='store') STORE_VIDEOS = STORE_VIDEOS.filter(x=>x.id!==id);
+    renderMissionsTable(); renderPlansTable(); renderRPTable(); renderStoreTable(); renderOverview();
+  }catch(e){ console.error(e); alert('Could not delete — please try again.'); }
+}
+
+/* ---------------- GRADING ---------------- */
+function renderGrading(){
+  const wrap = document.getElementById('gradingWrap');
+  const queue = buildGradingQueue();
+  if(queue.length===0){
+    wrap.innerHTML = `<div class="card"><div class="empty-note">🎉 Nothing waiting for review — you're all caught up.</div></div>`;
+    return;
+  }
+  wrap.innerHTML = queue.map(q=>{
+    const uid = `${q.studentKey}__${q.kind}__${q.itemId}`;
+    return `<div class="queue-card">
+      <div class="qhead">
+        <div>
+          <div class="qstudent">${escapeHtml(q.studentName)}</div>
+          <div class="qitem">${q.kind==='rp' ? '🏅 Ranking Paper: ' : '🗂️ '}${escapeHtml(q.itemTitle)}</div>
+        </div>
+        <a href="${escapeAttr(q.link)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Open Submission</a>
+      </div>
+      <div class="qform">
+        <input type="number" min="0" max="100" placeholder="Score %" id="score_${uid}">
+        <input type="text" placeholder="Feedback for the student (optional)" id="feedback_${uid}">
+        <button class="btn btn-teal btn-sm" data-save-grade="${uid}">Save Grade</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('[data-save-grade]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const [studentKey, kind, itemId] = btn.dataset.saveGrade.split('__');
+      saveGrade(studentKey, kind, itemId, btn);
+    });
+  });
+}
+
+async function saveGrade(studentKey, kind, itemId, btn){
+  const uid = `${studentKey}__${kind}__${itemId}`;
+  const scoreInput = document.getElementById('score_'+uid);
+  const feedbackInput = document.getElementById('feedback_'+uid);
+  const score = parseFloat(scoreInput.value);
+  if(isNaN(score) || score<0 || score>100){
+    scoreInput.style.borderColor = 'var(--red)';
+    scoreInput.placeholder = '0–100 required';
+    return;
+  }
+  const feedback = feedbackInput.value.trim();
+  const student = STUDENTS.find(s=>s._key===studentKey);
+  if(!student){ alert('This student record could not be found — try refreshing.'); return; }
+
+  const bucketName = kind==='mission' ? 'submissions' : 'rpSubmissions';
+  student[bucketName] = student[bucketName] || {};
+  const sub = student[bucketName][itemId];
+  if(!sub){ alert('This submission could not be found — try refreshing.'); return; }
+
+  const newBonus = score>85 ? 100 : (score>70 ? 50 : 0);
+  const oldBonus = sub.scoreBonusXP || 0;
+  student.xp = (student.xp||0) + (newBonus - oldBonus);
+  sub.score = score;
+  sub.feedback = feedback;
+  sub.status = 'graded';
+  sub.scoreBonusXP = newBonus;
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await saveStudentDoc(student);
+    renderGrading();
+    renderOverview();
+    renderStudents();
+  }catch(e){
+    console.error(e);
+    alert('Could not save this grade — please check your connection and try again.');
+    btn.disabled = false; btn.textContent = 'Save Grade';
+  }
+}
+
+/* ---------------- STUDENTS ---------------- */
+document.getElementById('refreshStudentsBtn').addEventListener('click', async ()=>{
+  STUDENTS = await loadStudents();
+  renderStudents();
+  renderOverview();
+});
+
+function renderStudents(){
+  const {flagged} = findDuplicates();
+  const dupWrap = document.getElementById('studentsDupWrap');
+  dupWrap.innerHTML = flagged.size>0
+    ? `<div class="dup-banner">⚠️ Names highlighted below look like they might belong to the same student (typo or inconsistent spelling). Use "Adjust XP" to move progress, or "Delete" to remove the stray one.</div>`
+    : '';
+
+  const el = document.getElementById('studentsTable');
+  if(STUDENTS.length===0){
+    el.innerHTML = '';
+    el.parentElement.innerHTML = `<div class="empty-note">No students have logged in yet.</div>`;
+    return;
+  }
+  const sorted = [...STUDENTS].sort((a,b)=>(b.xp||0)-(a.xp||0));
+  el.innerHTML = `<tr><th>Student</th><th>Coins Earned</th><th>Wallet</th><th>Total Marks</th><th>Missions</th><th>Streak</th><th>Purchases</th><th>Pending</th><th></th></tr>` +
+    sorted.map(s=>{
+      const isDup = flagged.has(s._key);
+      const pc = purchaseCountFor(s);
+      return `<tr>
+        <td>
+          <div class="name-cell">
+            <div class="avatar-sm">${avatarHTML(s)}</div>
+            <div>
+              <div>${escapeHtml(s.name)} ${isDup?'<span class="pill pill-dup">possible duplicate</span>':''}</div>
+              <div class="mono" style="font-size:10.5px; color:var(--ink-soft);">${escapeHtml(s._key)}</div>
+            </div>
+          </div>
+        </td>
+        <td class="mono">🪙 ${s.xp||0}</td>
+        <td class="mono">🪙 ${walletBalance(s)}</td>
+        <td class="mono">${totalMarks(s)}</td>
+        <td>${completedCount(s)}/${MISSIONS.length}</td>
+        <td>${currentStreak(s)} 🔥</td>
+        <td>${pc>0 ? `<button class="btn btn-ghost btn-sm" data-view-purchases="${s._key}">${pc} 🛍️</button>` : '—'}</td>
+        <td>${pendingCountFor(s)>0 ? `<span class="pill pill-pending">${pendingCountFor(s)}</span>` : '—'}</td>
+        <td class="row-actions">
+          <button class="btn btn-ghost btn-sm" data-adjust-xp="${s._key}">Adjust XP</button>
+          <button class="btn btn-red btn-sm" data-delete-student="${s._key}">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+  el.querySelectorAll('[data-adjust-xp]').forEach(b=>b.addEventListener('click', ()=>adjustXP(b.dataset.adjustXp)));
+  el.querySelectorAll('[data-delete-student]').forEach(b=>b.addEventListener('click', ()=>deleteStudent(b.dataset.deleteStudent)));
+  el.querySelectorAll('[data-view-purchases]').forEach(b=>b.addEventListener('click', ()=>openPurchasesModal(b.dataset.viewPurchases)));
+}
+
+/* ---------------- PURCHASE LOG ---------------- */
+function openPurchasesModal(studentKey){
+  const student = STUDENTS.find(s=>s._key===studentKey);
+  if(!student) return;
+  const entries = Object.entries(student.purchases||{}).filter(([,x])=>x && x.purchased);
+  entries.sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  document.getElementById('purchasesModalTitle').textContent = `${student.name} — Purchase Log`;
+  document.getElementById('purchasesModalBody').innerHTML = entries.length===0
+    ? `<div class="empty-note">No purchases yet.</div>`
+    : `<table class="data"><tr><th>Video</th><th>Price</th><th>Date</th></tr>` +
+      entries.map(([videoId,p])=>`<tr>
+        <td>${escapeHtml(storeTitleById(videoId))}</td>
+        <td class="mono">🪙 ${p.price||0}</td>
+        <td>${p.ts ? new Date(p.ts).toLocaleString() : '—'}</td>
+      </tr>`).join('') + `</table>`;
+  document.getElementById('purchasesModal').classList.add('show');
+}
+document.getElementById('purchasesModalCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('purchasesModal').classList.remove('show');
+});
+document.getElementById('purchasesModal').addEventListener('click', (e)=>{
+  if(e.target.id==='purchasesModal') document.getElementById('purchasesModal').classList.remove('show');
+});
+
+async function adjustXP(studentKey){
+  const student = STUDENTS.find(s=>s._key===studentKey);
+  if(!student) return;
+  const val = prompt(`Adjust XP for ${student.name}\nCurrent XP: ${student.xp||0}\n\nEnter the new total XP:`, student.xp||0);
+  if(val===null) return;
+  const num = parseInt(val, 10);
+  if(isNaN(num) || num<0){ alert('Please enter a valid non-negative whole number.'); return; }
+  student.xp = num;
+  try{
+    await saveStudentDoc(student);
+    renderStudents();
+    renderOverview();
+  }catch(e){ console.error(e); alert('Could not save — please try again.'); }
+}
+
+async function deleteStudent(studentKey){
+  const student = STUDENTS.find(s=>s._key===studentKey);
+  if(!student) return;
+  if(!confirm(`Delete ${student.name}'s entire profile? This removes all their XP and submissions permanently.`)) return;
+  if(!confirm(`This cannot be undone. Delete "${student.name}" for good?`)) return;
+  try{
+    await db.collection('students').doc(studentKey).delete();
+    STUDENTS = STUDENTS.filter(s=>s._key!==studentKey);
+    renderStudents();
+    renderOverview();
+  }catch(e){ console.error(e); alert('Could not delete — please try again.'); }
+}
+</script>
+</body>
+</html>
