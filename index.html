@@ -89,6 +89,7 @@
   .btn-sm{padding:8px 14px; font-size:13px; border-radius:8px;}
   .btn:disabled{opacity:.45; cursor:not-allowed;}
   .login-foot{margin-top:18px; font-size:12px; color:var(--ink-soft);}
+  .auth-error{display:none; background:#fde8e8; color:#b42318; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:14px; text-align:left;}
 
   /* ---------- LOADING ---------- */
   #loadingScreen{
@@ -340,11 +341,14 @@
   <div class="login-card">
     <div class="badge-mark">E</div>
     <h1>EICT Online</h1>
-    <p class="tagline">ICT Final 50-Day Mission · Enter your Agent name to open your mission dashboard. Your progress is saved automatically to this device.</p>
+    <p class="tagline">ICT Final 50-Day Mission · Enter your Agent name and access code to open your mission dashboard.</p>
     <label class="field-label">Agent Name</label>
     <input type="text" id="loginName" placeholder="e.g. Nimal Perera" autocomplete="off">
+    <label class="field-label" style="margin-top:14px;">Access Code</label>
+    <input type="text" id="loginCode" placeholder="e.g. 7K2P9Q" autocomplete="off" style="text-transform:uppercase;">
+    <div class="auth-error" id="loginError"></div>
     <button class="btn btn-primary btn-block" id="loginBtn">🚀 Start / Resume Mission</button>
-    <p class="login-foot">New here? Just type your name — Agent profile is created automatically.</p>
+    <p class="login-foot">Don't have an access code? Ask your teacher — they assign one to each student.</p>
   </div>
 </div>
 
@@ -838,24 +842,74 @@ function avatarInnerHTML(p){
 function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
 
 /* ---------------- login flow ---------------- */
-document.getElementById('loginBtn').addEventListener('click', doLogin);
+const SESSION_KEY = 'eict_session';
+
+function showLoginError(msg){
+  const box = document.getElementById('loginError');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+function clearLoginError(){
+  const box = document.getElementById('loginError');
+  box.style.display = 'none';
+  box.textContent = '';
+}
+
+document.getElementById('loginBtn').addEventListener('click', ()=>doLogin());
 document.getElementById('loginName').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('loginCode').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 
 async function doLogin(){
+  clearLoginError();
   const nameInput = document.getElementById('loginName');
+  const codeInput = document.getElementById('loginCode');
   const name = nameInput.value.trim();
+  const code = codeInput.value.trim().toUpperCase();
+
   if(!name){ nameInput.style.borderColor = 'var(--red)'; nameInput.focus(); return; }
+  if(!code){ codeInput.style.borderColor = 'var(--red)'; codeInput.focus(); return; }
   if(!db){ alert("⚠️ Not connected to the database yet. Ask your teacher to finish the setup."); return; }
 
+  const loginBtn = document.getElementById('loginBtn');
+  loginBtn.disabled = true; loginBtn.textContent = 'Checking…';
+
+  const key = name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  const existing = await getStudent(key);
+
+  loginBtn.disabled = false; loginBtn.textContent = '🚀 Start / Resume Mission';
+
+  if(!existing || !existing.accessCode){
+    showLoginError("We couldn't find that name registered by your teacher. Check the spelling, or ask your teacher to add you.");
+    return;
+  }
+  if(String(existing.accessCode).toUpperCase() !== code){
+    showLoginError("That access code doesn't match. Double-check with your teacher.");
+    return;
+  }
+
+  await enterApp(key, name, existing);
+}
+
+async function enterApp(key, name, existingDoc){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('loadingScreen').style.display = 'flex';
 
-  const key = name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
-  let existing = await getStudent(key);
-  if(!existing){ existing = defaultProfile(name); await setStudent(key, existing); }
-  ensureProfileShape(existing);
-  profile = existing;
+  let data = existingDoc;
+  if(!data){ data = await getStudent(key); }
+  if(!data){
+    // Session pointed at a student that no longer exists — bail back to login.
+    sessionStorage.removeItem(SESSION_KEY);
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    showLoginError('Your session expired or your profile was removed. Please log in again.');
+    return;
+  }
+  ensureProfileShape(data);
+  profile = data;
   profile._key = key;
+
+  // Remember this login only for the current browser tab — cleared on tab close.
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({key, name}));
 
   await loadAllContent();
 
@@ -864,10 +918,25 @@ async function doLogin(){
   renderAll();
 }
 
+async function tryResumeSession(){
+  let saved = null;
+  try{ saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }catch(e){ saved = null; }
+  if(!saved || !saved.key){ return; }
+  if(!db){ return; }
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'flex';
+  await enterApp(saved.key, saved.name, null);
+}
+tryResumeSession();
+
 document.getElementById('logoutLink').addEventListener('click', ()=>{
+  sessionStorage.removeItem(SESSION_KEY);
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginName').value = '';
+  document.getElementById('loginCode').value = '';
+  clearLoginError();
   profile = null;
 });
 
