@@ -331,9 +331,12 @@
         <div class="topbar">
           <div>
             <h2>🧑‍🎓 Students</h2>
-            <div class="sub">Everyone who has ever logged into the student site. Adjust XP or remove test/duplicate profiles here.</div>
+            <div class="sub">Add a student here first — they'll need their name and access code to log in. Adjust XP or remove test/duplicate profiles here.</div>
           </div>
-          <button class="btn btn-ghost btn-sm" id="refreshStudentsBtn">↻ Refresh</button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary btn-sm" id="addStudentBtn">+ Add Student</button>
+            <button class="btn btn-ghost btn-sm" id="refreshStudentsBtn">↻ Refresh</button>
+          </div>
         </div>
         <div id="studentsDupWrap"></div>
         <div class="card table-wrap"><table class="data" id="studentsTable"></table></div>
@@ -1012,7 +1015,7 @@ function renderStudents(){
     return;
   }
   const sorted = [...STUDENTS].sort((a,b)=>(b.xp||0)-(a.xp||0));
-  el.innerHTML = `<tr><th>Student</th><th>Coins Earned</th><th>Wallet</th><th>Total Marks</th><th>Missions</th><th>Streak</th><th>Purchases</th><th>Pending</th><th></th></tr>` +
+  el.innerHTML = `<tr><th>Student</th><th>Access Code</th><th>Coins Earned</th><th>Wallet</th><th>Total Marks</th><th>Missions</th><th>Streak</th><th>Purchases</th><th>Pending</th><th></th></tr>` +
     sorted.map(s=>{
       const isDup = flagged.has(s._key);
       const pc = purchaseCountFor(s);
@@ -1026,6 +1029,9 @@ function renderStudents(){
             </div>
           </div>
         </td>
+        <td>${s.accessCode
+            ? `<span class="mono" style="font-weight:700; letter-spacing:0.05em;">${escapeHtml(s.accessCode)}</span> <button class="btn btn-ghost btn-sm" data-regen-code="${s._key}" title="Generate a new code">↻</button>`
+            : `<button class="btn btn-amber btn-sm" data-regen-code="${s._key}">Generate code</button>`}</td>
         <td class="mono">🪙 ${s.xp||0}</td>
         <td class="mono">🪙 ${walletBalance(s)}</td>
         <td class="mono">${totalMarks(s)}</td>
@@ -1043,6 +1049,75 @@ function renderStudents(){
   el.querySelectorAll('[data-adjust-xp]').forEach(b=>b.addEventListener('click', ()=>adjustXP(b.dataset.adjustXp)));
   el.querySelectorAll('[data-delete-student]').forEach(b=>b.addEventListener('click', ()=>deleteStudent(b.dataset.deleteStudent)));
   el.querySelectorAll('[data-view-purchases]').forEach(b=>b.addEventListener('click', ()=>openPurchasesModal(b.dataset.viewPurchases)));
+  el.querySelectorAll('[data-regen-code]').forEach(b=>b.addEventListener('click', ()=>regenerateCode(b.dataset.regenCode)));
+}
+
+/* ---------------- ACCESS CODES & ADDING STUDENTS ---------------- */
+function generateAccessCode(){
+  // Avoids easily-confused characters (0/O, 1/I/L) so students can read codes off a printout correctly.
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i=0;i<6;i++){ code += chars[Math.floor(Math.random()*chars.length)]; }
+  return code;
+}
+
+function defaultStudentDoc(name){
+  return {
+    name,
+    accessCode: generateAccessCode(),
+    xp: 0,
+    photoURL: '',
+    submissions: {},
+    rpSubmissions: {},
+    streakBonusGiven: {},
+    purchases: {},
+    createdAt: Date.now(),
+  };
+}
+
+document.getElementById('addStudentBtn').addEventListener('click', async ()=>{
+  const name = prompt('Student full name (exactly as they should type it to log in):');
+  if(name===null) return;
+  const trimmed = name.trim();
+  if(!trimmed){ alert('Please enter a name.'); return; }
+
+  const key = trimmed.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  if(!key){ alert('That name has no usable letters/numbers — please try a different name.'); return; }
+
+  const already = STUDENTS.find(s=>s._key===key);
+  if(already){
+    alert(`A student with this name already exists.\n\nTheir access code is: ${already.accessCode || '(none yet — click "Generate code" for them in the table)'}`);
+    return;
+  }
+
+  const doc = defaultStudentDoc(trimmed);
+  try{
+    await db.collection('students').doc(key).set(doc);
+    STUDENTS.push({_key:key, ...doc});
+    renderStudents();
+    renderOverview();
+    alert(`Student added!\n\nName: ${trimmed}\nAccess Code: ${doc.accessCode}\n\nGive this exact name + code to the student — they'll need both to log in.`);
+  }catch(e){
+    console.error(e);
+    alert('Could not add this student — please check your connection and try again.');
+  }
+});
+
+async function regenerateCode(studentKey){
+  const student = STUDENTS.find(s=>s._key===studentKey);
+  if(!student) return;
+  if(student.accessCode && !confirm(`Generate a NEW code for ${student.name}? Their old code (${student.accessCode}) will stop working immediately.`)) return;
+
+  const newCode = generateAccessCode();
+  try{
+    await db.collection('students').doc(studentKey).update({accessCode: newCode});
+    student.accessCode = newCode;
+    renderStudents();
+    alert(`New access code for ${student.name}: ${newCode}`);
+  }catch(e){
+    console.error(e);
+    alert('Could not generate a code — please try again.');
+  }
 }
 
 /* ---------------- PURCHASE LOG ---------------- */
