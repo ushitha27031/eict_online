@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EICT Online — ICT Final 50-Day Mission</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- Firebase (free shared database for live leaderboard + content) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg: #F2F7F8;
+    --surface: #FFFFFF;
+    --surface-soft: #EAF3F4;
+    --border: #DCE6E8;
+    --ink: #16242E;
+    --ink-soft: #5C7080;
+    --primary: #1E4E8C;
+    --primary-soft: #E7EFFA;
+    --teal: #2BA89A;
+    --teal-soft: #E3F5F2;
+    --amber: #F2A93B;
+    --amber-soft: #FDF2DF;
+    --green: #3FA66B;
+    --red: #D9534F;
+    --purple: #7C5CBF;
+    --purple-soft: #EFE9FA;
+    --shadow: 0 4px 18px rgba(20, 50, 70, 0.07);
+    --radius: 14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit; cursor:pointer;}
+  a{color:inherit;}
+  ::selection{background:var(--amber-soft);}
+
+  /* ---------- LOGIN ---------- */
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 12% 18%, rgba(43,168,154,0.16), transparent 40%),
+      radial-gradient(circle at 88% 82%, rgba(30,78,140,0.14), transparent 45%),
+      var(--bg);
+    padding:24px;
+  }
+  .login-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    box-shadow:var(--shadow); padding:44px 40px; width:100%; max-width:420px;
+    text-align:center;
+  }
+  .badge-mark{
+    width:64px; height:64px; border-radius:16px; margin:0 auto 18px;
+    background:linear-gradient(135deg, var(--primary), var(--teal));
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-family:'Space Grotesk'; font-weight:700; font-size:22px;
+  }
+  .login-card h1{font-size:24px; color:var(--primary);}
+  .login-card p.tagline{color:var(--ink-soft); font-size:13.5px; margin:8px 0 26px; line-height:1.5;}
+  .field-label{display:block; text-align:left; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin:0 0 6px; text-transform:uppercase; letter-spacing:0.04em;}
+  input[type=text], input[type=number], select{
+    width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--border);
+    font-size:14.5px; font-family:'Inter'; background:#fbfdfd; color:var(--ink);
+    transition:border-color .15s;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus{outline:none; border-color:var(--teal);}
+  .btn{
+    border:none; border-radius:10px; padding:12px 20px; font-weight:600; font-size:14.5px;
+    transition:transform .12s, box-shadow .12s; display:inline-flex; align-items:center; gap:8px; justify-content:center;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--primary); color:#fff;}
+  .btn-primary:hover{box-shadow:0 6px 16px rgba(30,78,140,0.28);}
+  .btn-teal{background:var(--teal); color:#fff;}
+  .btn-teal:hover{box-shadow:0 6px 16px rgba(43,168,154,0.28);}
+  .btn-ghost{background:var(--surface-soft); color:var(--primary);}
+  .btn-amber{background:var(--amber); color:#3a2a06;}
+  .btn-purple{background:var(--purple); color:#fff;}
+  .btn-block{width:100%; margin-top:18px;}
+  .btn-sm{padding:8px 14px; font-size:13px; border-radius:8px;}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  .login-foot{margin-top:18px; font-size:12px; color:var(--ink-soft);}
+  .auth-error{display:none; background:#fde8e8; color:#b42318; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:14px; text-align:left;}
+
+  /* ---------- LOADING ---------- */
+  #loadingScreen{
+    min-height:100vh; display:none; align-items:center; justify-content:center; flex-direction:column; gap:14px;
+    background:var(--bg); color:var(--ink-soft); font-size:14px;
+  }
+  .spinner{width:34px; height:34px; border-radius:50%; border:3px solid var(--border); border-top-color:var(--teal); animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- APP SHELL ---------- */
+  #app{display:none; min-height:100vh;}
+  .shell{display:grid; grid-template-columns:240px 1fr; min-height:100vh;}
+  .sidebar{
+    background:var(--surface); border-right:1px solid var(--border);
+    padding:22px 16px; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .brand{display:flex; align-items:center; gap:10px; padding:4px 8px 22px; border-bottom:1px solid var(--border); margin-bottom:18px;}
+  .brand .badge-mark{width:38px; height:38px; border-radius:10px; font-size:14px; margin:0;}
+  .brand-name{font-size:15.5px; font-weight:700; color:var(--primary); line-height:1.1;}
+  .brand-sub{font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.06em;}
+  nav.navlist{display:flex; flex-direction:column; gap:3px;}
+  .navlist button{
+    background:none; border:none; text-align:left; padding:10px 12px; border-radius:9px;
+    font-size:14px; font-weight:500; color:var(--ink-soft); display:flex; align-items:center; gap:10px;
+  }
+  .navlist button .ic{font-size:16px;}
+  .navlist button:hover{background:var(--surface-soft); color:var(--ink);}
+  .navlist button.active{background:var(--primary-soft); color:var(--primary); font-weight:700;}
+  .sidebar-foot{margin-top:auto; padding-top:14px; border-top:1px solid var(--border);}
+  .agent-mini{display:flex; align-items:center; gap:10px; padding:8px;}
+  .avatar-mini{
+    width:34px; height:34px; border-radius:50%; background:var(--teal-soft); color:var(--teal);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; overflow:hidden;
+  }
+  .avatar-img{width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;}
+  .mini-name{font-size:12.5px; font-weight:700;}
+  .mini-rank{font-size:10.5px; color:var(--ink-soft);}
+  .logout-link{display:block; margin-top:8px; font-size:11.5px; color:var(--ink-soft); text-decoration:underline; cursor:pointer; padding:0 8px;}
+
+  .main{padding:26px 34px 60px; max-width:1180px;}
+  .topbar{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; gap:16px; flex-wrap:wrap;}
+  .topbar h2{font-size:24px; color:var(--ink);}
+  .topbar .sub{color:var(--ink-soft); font-size:13.5px; margin-top:4px;}
+  .xp-pill{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:10px 16px; display:flex; align-items:center; gap:10px; box-shadow:var(--shadow);
+  }
+  .xp-pill .num{font-family:'JetBrains Mono'; font-weight:700; color:var(--primary); font-size:16px;}
+  .xp-pill .lbl{font-size:10.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em;}
+
+  .view{display:none;}
+  .view.active{display:block; animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  .grid{display:grid; gap:18px;}
+  .grid-2{grid-template-columns:1.3fr 1fr;}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:900px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} .shell{grid-template-columns:1fr;} .sidebar{position:relative; height:auto;}}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px; box-shadow:var(--shadow);
+  }
+  .card h3{font-size:15px; margin-bottom:14px; display:flex; align-items:center; gap:8px;}
+  .card h3 .ic{font-size:17px;}
+
+  /* Agent ID card */
+  .id-card{
+    background:linear-gradient(135deg, var(--primary) 0%, #15396b 100%);
+    color:#fff; border-radius:18px; padding:22px 24px; position:relative; overflow:hidden;
+  }
+  .id-card::after{
+    content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px; border-radius:50%;
+    background:radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%);
+  }
+  .id-card .row1{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .id-card .who{display:flex; align-items:center; gap:12px;}
+  .avatar-id{
+    width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,0.18); flex-shrink:0; overflow:hidden;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px;
+  }
+  .id-card .eyebrow{font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; opacity:.75;}
+  .id-card .name{font-family:'Space Grotesk'; font-size:22px; font-weight:700; margin-top:3px;}
+  .rank-chip{
+    background:rgba(255,255,255,0.16); padding:6px 12px; border-radius:20px; font-size:12px; font-weight:700;
+    display:inline-flex; align-items:center; gap:6px; backdrop-filter:blur(2px);
+  }
+  .xp-bar-track{background:rgba(255,255,255,0.18); height:9px; border-radius:6px; margin-top:16px; overflow:hidden;}
+  .xp-bar-fill{background:linear-gradient(90deg, var(--amber), #ffd27a); height:100%; border-radius:6px; transition:width .4s ease;}
+  .id-card .xp-line{display:flex; justify-content:space-between; font-size:11.5px; margin-top:7px; opacity:.85;}
+  .id-stats{display:flex; gap:22px; margin-top:18px;}
+  .id-stats div{font-size:11px; opacity:.8;}
+  .id-stats .v{font-family:'JetBrains Mono'; font-size:17px; font-weight:700; opacity:1; display:block;}
+
+  /* Profile photo card */
+  .profile-row{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+  .profile-avatar-big{
+    width:64px; height:64px; border-radius:50%; overflow:hidden; background:var(--teal-soft); color:var(--teal);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:24px; flex-shrink:0;
+  }
+  .link-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .link-row input{flex:1; min-width:200px;}
+
+  /* Mission chain */
+  .chain{display:flex; align-items:center; overflow-x:auto; padding:10px 2px 18px; gap:0;}
+  .chain-node{display:flex; flex-direction:column; align-items:center; min-width:78px; flex-shrink:0; cursor:pointer;}
+  .chain-circle{
+    width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono'; font-weight:700; font-size:13px; border:2px solid var(--border); background:var(--surface);
+    color:var(--ink-soft); transition:transform .12s;
+  }
+  .chain-node:hover .chain-circle{transform:scale(1.08);}
+  .chain-circle.done{background:var(--green); border-color:var(--green); color:#fff;}
+  .chain-circle.current{background:var(--surface); border-color:var(--amber); color:var(--amber); box-shadow:0 0 0 4px var(--amber-soft);}
+  .chain-circle.locked{background:#f3f5f6; color:#b6c1c8;}
+  .chain-label{font-size:9.5px; color:var(--ink-soft); margin-top:6px; text-align:center; max-width:80px;}
+  .chain-line{height:2px; background:var(--border); flex:1; min-width:18px;}
+  .chain-line.done{background:var(--green);}
+
+  .mission-list{display:flex; flex-direction:column; gap:10px;}
+  .mission-row{
+    display:flex; align-items:center; gap:14px; padding:14px 16px; border:1px solid var(--border);
+    border-radius:12px; background:var(--surface); cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .mission-row:hover{border-color:var(--teal); background:var(--teal-soft);}
+  .mission-row.rp-row{border-color:var(--purple); background:var(--purple-soft);}
+  .mission-row.rp-row:hover{border-color:var(--purple); background:#e6def7;}
+  .m-num{
+    width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono'; font-weight:700; font-size:12.5px; flex-shrink:0;
+  }
+  .m-num.done{background:var(--teal-soft); color:var(--teal);}
+  .m-num.todo{background:var(--amber-soft); color:#a26a06;}
+  .m-num.locked{background:#f1f3f4; color:#aab4ba;}
+  .m-num.rp{background:var(--purple); color:#fff;}
+  .m-title{font-weight:700; font-size:14px;}
+  .m-meta{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+  .rp-tag{display:inline-block; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--purple); background:#fff; padding:2px 7px; border-radius:10px; margin-bottom:3px;}
+  .m-status{margin-left:auto; font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:20px; white-space:nowrap;}
+  .status-done{background:var(--teal-soft); color:var(--teal);}
+  .status-todo{background:var(--amber-soft); color:#a26a06;}
+  .status-locked{background:#f1f3f4; color:#aab4ba;}
+  .status-pending{background:#FDF2DF; color:#a26a06;}
+  .status-graded{background:var(--teal-soft); color:var(--teal);}
+
+  /* Modal */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(15,28,38,0.5); z-index:50;
+    align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{
+    background:var(--surface); border-radius:18px; width:100%; max-width:620px; padding:0; overflow:hidden;
+    box-shadow:0 20px 50px rgba(10,30,45,0.25);
+  }
+  .modal-head{padding:22px 26px; background:var(--primary-soft); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start;}
+  .modal-head h3{font-size:18px; color:var(--primary);}
+  .modal-head .m-meta{margin-top:4px;}
+  .modal-close{background:none; border:none; font-size:20px; color:var(--ink-soft); line-height:1;}
+  .modal-body{padding:22px 26px; display:flex; flex-direction:column; gap:18px;}
+  .step-block{border:1px solid var(--border); border-radius:12px; padding:16px;}
+  .step-block.locked{opacity:.5;}
+  .step-head{display:flex; align-items:center; gap:8px; font-weight:700; font-size:13.5px; margin-bottom:8px;}
+  .step-head .dot{width:8px; height:8px; border-radius:50%; background:var(--border);}
+  .step-block.unlocked .step-head .dot{background:var(--green);}
+  .file-input-wrap{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .pill-info{font-size:11.5px; background:var(--surface-soft); color:var(--ink-soft); padding:4px 9px; border-radius:20px;}
+  .code-row{display:flex; gap:8px; margin-top:8px;}
+  .code-row input{flex:1;}
+  .reveal-code{
+    font-family:'JetBrains Mono'; background:#1B2733; color:#9be8a0; padding:10px 14px; border-radius:8px;
+    font-size:14px; letter-spacing:.04em; display:inline-block; margin-top:6px;
+  }
+  .small-note{font-size:11.5px; color:var(--ink-soft); margin-top:4px; line-height:1.5;}
+  .xp-toast-list{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
+  .xp-tag{background:var(--green); color:#fff; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px;}
+
+  /* leaderboard */
+  .lb-row{display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:12px;}
+  .lb-row.me{background:var(--amber-soft); border:1px solid var(--amber);}
+  .lb-rank{font-family:'JetBrains Mono'; font-weight:700; width:30px; text-align:center; color:var(--ink-soft);}
+  .lb-rank.top1{color:#C9971E; font-size:18px;}
+  .lb-rank.top2{color:#8C97A3; font-size:16px;}
+  .lb-rank.top3{color:#B0703F; font-size:16px;}
+  .lb-name{font-weight:700; font-size:13.5px;}
+  .lb-rankname{font-size:11px; color:var(--ink-soft);}
+  .lb-xp{margin-left:auto; font-family:'JetBrains Mono'; font-weight:700; color:var(--primary);}
+
+  .award-card{background:var(--surface-soft); border-radius:12px; padding:16px; text-align:center;}
+  .award-card .ic{font-size:26px;}
+  .award-card .t{font-weight:700; font-size:13px; margin-top:8px;}
+  .award-card .who{font-size:13.5px; color:var(--teal); font-weight:700; margin-top:4px;}
+  .award-card .why{font-size:11px; color:var(--ink-soft); margin-top:2px;}
+
+  .stat-box{text-align:center; padding:18px 10px;}
+  .stat-box .v{font-family:'JetBrains Mono'; font-size:26px; font-weight:700; color:var(--primary);}
+  .stat-box .l{font-size:11.5px; color:var(--ink-soft); margin-top:4px;}
+
+  .reward-card{border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:8px;}
+  .reward-card.locked{opacity:.55;}
+  .reward-card .lock-ic{font-size:22px;}
+  .reward-card h4{font-size:14.5px;}
+  .reward-card p{font-size:12px; color:var(--ink-soft); margin:0; line-height:1.5;}
+
+  .badge-tag{display:inline-block; font-size:10.5px; font-weight:700; padding:3px 10px; border-radius:20px; background:var(--teal-soft); color:var(--teal);}
+
+  .video-card{border:1px solid var(--border); border-radius:14px; padding:0; overflow:hidden; display:flex; flex-direction:column;}
+  .video-thumb{height:110px; background:linear-gradient(135deg, var(--primary-soft), var(--purple-soft)); display:flex; align-items:center; justify-content:center; font-size:34px;}
+  .video-body{padding:16px; display:flex; flex-direction:column; gap:6px; flex:1;}
+  .video-body h4{font-size:14.5px;}
+  .video-body p{font-size:12px; color:var(--ink-soft); margin:0; line-height:1.5;}
+  .video-price{font-family:'JetBrains Mono'; font-weight:700; color:var(--amber); font-size:15px; margin-top:auto; padding-top:8px;}
+  .dummy-tag{display:inline-block; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--red); background:#FBE7E6; padding:2px 7px; border-radius:10px; align-self:flex-start;}
+
+  table.simple{width:100%; border-collapse:collapse;}
+  table.simple th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:8px 10px; border-bottom:1px solid var(--border);}
+  table.simple td{padding:10px; border-bottom:1px solid var(--border); font-size:13px;}
+
+  .streak-flame{display:inline-flex; align-items:center; gap:4px; font-weight:700; color:#D9712B;}
+  .progress-track{height:7px; border-radius:6px; background:var(--surface-soft); overflow:hidden;}
+  .progress-fill{height:100%; background:var(--teal); border-radius:6px;}
+
+  .section-eyebrow{font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--teal); font-weight:700; margin-bottom:6px;}
+  .empty-note{font-size:13px; color:var(--ink-soft); text-align:center; padding:30px 10px;}
+
+  /* Study plans */
+  .plan-card{border:1px solid var(--border); border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:8px;}
+  .plan-card.locked{opacity:.55;}
+  .plan-num{width:32px; height:32px; border-radius:8px; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12.5px; font-family:'JetBrains Mono';}
+  .plan-card h4{font-size:14.5px; margin-top:4px;}
+  .plan-card p{font-size:12px; color:var(--ink-soft); margin:0; line-height:1.5;}
+
+  /* About page */
+  .about-section{margin-bottom:24px;}
+  .about-section h3{font-size:15.5px; color:var(--primary); margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .about-section p{color:var(--ink-soft); font-size:13.5px; line-height:1.75; margin:0 0 10px;}
+  .about-section ul{margin:0 0 10px; padding-left:20px; color:var(--ink-soft); font-size:13.5px; line-height:1.8;}
+  .about-section li strong{color:var(--ink);}
+
+  ::-webkit-scrollbar{height:8px; width:8px;}
+  ::-webkit-scrollbar-thumb{background:#cbd8dc; border-radius:8px;}
+
+  /* ---------- FX: BOOT OVERLAY (game-style intro, plays once on dashboard entry) ---------- */
+  #bootOverlay{
+    position:fixed; inset:0; z-index:9999;
+    background:radial-gradient(circle at 50% 42%, #0d2230 0%, #081420 55%, #04090e 100%);
+    display:none; align-items:center; justify-content:center; flex-direction:column;
+    font-family:'Space Grotesk','Inter',monospace; overflow:hidden;
+  }
+  #bootOverlay.show{display:flex;}
+  #bootOverlay.hide{ animation: irisOut .6s cubic-bezier(.6,0,.3,1) forwards; }
+  @keyframes irisOut{
+    0%{ clip-path:circle(150% at 50% 50%); }
+    100%{ clip-path:circle(0% at 50% 50%); }
+  }
+  #bootOverlay .grid-bg{
+    position:absolute; inset:0; opacity:0.28;
+    background-image:
+      linear-gradient(rgba(43,168,154,0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(43,168,154,0.35) 1px, transparent 1px);
+    background-size:34px 34px;
+    animation: gridDrift 6s linear infinite;
+  }
+  @keyframes gridDrift{ from{background-position:0 0;} to{background-position:34px 34px;} }
+  #bootOverlay .starfield{
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(1.5px 1.5px at 12% 22%, #bfeee6 60%, transparent),
+      radial-gradient(1.5px 1.5px at 78% 15%, #bfeee6 60%, transparent),
+      radial-gradient(1px 1px at 32% 68%, #8fd9cc 60%, transparent),
+      radial-gradient(1.5px 1.5px at 88% 62%, #bfeee6 60%, transparent),
+      radial-gradient(1px 1px at 55% 85%, #8fd9cc 60%, transparent),
+      radial-gradient(1.5px 1.5px at 18% 78%, #bfeee6 60%, transparent),
+      radial-gradient(1px 1px at 66% 32%, #8fd9cc 60%, transparent),
+      radial-gradient(1.5px 1.5px at 42% 12%, #bfeee6 60%, transparent);
+    animation: starTwinkle 2.6s ease-in-out infinite;
+  }
+  @keyframes starTwinkle{ 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+  #bootOverlay .scan{
+    position:absolute; left:0; right:0; height:140px;
+    background:linear-gradient(180deg, transparent, rgba(43,168,154,0.18), transparent);
+    animation: scanMove 2.2s ease-in-out infinite;
+  }
+  @keyframes scanMove{ 0%{top:-140px;} 100%{top:100%;} }
+
+  #bootOverlay .boot-content{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; }
+
+  .boot-portal{ position:relative; width:150px; height:150px; margin-bottom:22px; display:flex; align-items:center; justify-content:center; }
+  .portal-ring{ position:absolute; border-radius:50%; border:2px solid transparent; }
+  .portal-ring.ring1{ inset:0; border-top-color:var(--teal); border-right-color:var(--teal); animation:spinCW 1.6s linear infinite; }
+  .portal-ring.ring2{ inset:14px; border-bottom-color:var(--primary); border-left-color:var(--primary); opacity:0.85; animation:spinCCW 2.1s linear infinite; }
+  .portal-ring.ring3{ inset:28px; border-top-color:var(--amber); border-left-color:var(--amber); opacity:0.7; animation:spinCW 1.3s linear infinite; }
+  @keyframes spinCW{ to{ transform:rotate(360deg); } }
+  @keyframes spinCCW{ to{ transform:rotate(-360deg); } }
+  .portal-core{
+    width:64px; height:64px; border-radius:16px;
+    background:linear-gradient(135deg, var(--primary), var(--teal));
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:700; font-size:24px; font-family:'Space Grotesk';
+    box-shadow:0 0 24px rgba(43,168,154,0.55);
+    animation: coreEntrance .6s cubic-bezier(.2,1.4,.4,1) forwards, corePulse 1.8s ease-in-out 0.6s infinite;
+    opacity:0; transform:scale(0.3);
+  }
+  @keyframes coreEntrance{ to{ opacity:1; transform:scale(1); } }
+  @keyframes corePulse{ 0%,100%{ box-shadow:0 0 18px rgba(43,168,154,0.45); } 50%{ box-shadow:0 0 32px rgba(43,168,154,0.8); } }
+
+  .boot-title{
+    font-family:'Space Grotesk'; font-size:26px; font-weight:700; color:#fff;
+    letter-spacing:0.08em; position:relative; opacity:0;
+    animation: typeIn .4s ease-out .25s forwards, glitchText 2.4s ease-in-out 1s 2;
+  }
+  @keyframes typeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+  @keyframes glitchText{
+    0%,92%,100%{ text-shadow:none; transform:translate(0,0); }
+    93%{ text-shadow:-2px 0 #ff4d6d, 2px 0 #2bd6c4; transform:translate(-1px,0); }
+    95%{ text-shadow:2px 0 #ff4d6d, -2px 0 #2bd6c4; transform:translate(1px,0); }
+    97%{ text-shadow:none; transform:translate(0,0); }
+  }
+  .boot-status{
+    margin-top:8px; min-height:16px; color:#8fe3d3; font-size:12.5px;
+    letter-spacing:0.05em; font-family:monospace; opacity:0.9;
+  }
+  .boot-status::before{ content:'> '; color:var(--teal); }
+
+  .boot-progress-wrap{ width:240px; margin-top:18px; display:flex; align-items:center; gap:10px; }
+  .boot-progress-bar{
+    flex:1; height:6px; border-radius:4px; background:rgba(255,255,255,0.08);
+    overflow:hidden; border:1px solid rgba(143,227,211,0.25);
+  }
+  .boot-progress-fill{
+    height:100%; width:0%; border-radius:4px;
+    background:linear-gradient(90deg, var(--teal), var(--primary));
+    box-shadow:0 0 8px rgba(43,168,154,0.7);
+    transition:width .12s linear;
+  }
+  .boot-progress-pct{ font-family:monospace; font-size:11.5px; color:#8fe3d3; min-width:34px; text-align:right; }
+
+  .boot-agent-card{
+    margin-top:22px; padding:12px 22px; border-radius:12px;
+    background:rgba(255,255,255,0.04); border:1px solid rgba(143,227,211,0.25);
+    display:flex; gap:22px; opacity:0; transform:translateY(8px);
+    animation: typeIn .4s ease-out forwards;
+    font-family:'Space Grotesk';
+  }
+  .boot-agent-card .agent-label{ font-size:9.5px; letter-spacing:0.08em; color:#6f93a3; text-transform:uppercase; margin-bottom:3px; }
+  .boot-agent-card .agent-value{ font-size:14.5px; font-weight:700; color:#fff; }
+  .boot-agent-card .agent-value.coins{ color:var(--amber); }
+
+  @media (prefers-reduced-motion: reduce){
+    .boot-title{ animation:typeIn .3s ease-out forwards; }
+    .portal-ring, .portal-core{ animation:none; opacity:1; transform:none; }
+    #bootOverlay.hide{ animation:none; opacity:0; transition:opacity .2s ease; }
+    #bootOverlay .grid-bg, #bootOverlay .starfield, #bootOverlay .scan{ animation:none; }
+  }
+
+  /* ---------- FX: COIN BURST TOAST ---------- */
+  #fxLayer{ position:fixed; inset:0; pointer-events:none; z-index:8500; overflow:hidden; }
+  .coin-toast{
+    position:fixed; left:50%; bottom:14%; transform:translateX(-50%) translateY(10px);
+    background:linear-gradient(135deg, var(--amber), #f7c766); color:#3a2a06;
+    font-family:'Space Grotesk'; font-weight:700; font-size:17px;
+    padding:10px 20px; border-radius:999px; box-shadow:0 8px 22px rgba(242,169,59,0.45);
+    opacity:0; animation: coinToastPop 1.6s ease forwards;
+  }
+  @keyframes coinToastPop{
+    0%{ opacity:0; transform:translateX(-50%) translateY(16px) scale(0.85); }
+    15%{ opacity:1; transform:translateX(-50%) translateY(0) scale(1.05); }
+    25%{ transform:translateX(-50%) translateY(0) scale(1); }
+    80%{ opacity:1; }
+    100%{ opacity:0; transform:translateX(-50%) translateY(-46px) scale(1); }
+  }
+  .coin-particle{
+    position:fixed; bottom:15%; font-size:20px; opacity:0;
+    animation: coinFloat 1.3s ease-out forwards;
+  }
+  @keyframes coinFloat{
+    0%{ opacity:0; transform:translateY(0) rotate(0deg) scale(0.6); }
+    12%{ opacity:1; }
+    100%{ opacity:0; transform:translateY(-160px) rotate(220deg) scale(1); }
+  }
+
+  /* ---------- FX: SUCCESS PULSE (submit / step unlocked) ---------- */
+  @keyframes successGlow{
+    0%{ box-shadow:0 0 0 0 rgba(63,166,107,0.55); }
+    70%{ box-shadow:0 0 0 16px rgba(63,166,107,0); }
+    100%{ box-shadow:0 0 0 0 rgba(63,166,107,0); }
+  }
+  .fx-success-glow{ animation: successGlow 0.9s ease-out; }
+  @keyframes checkPop{
+    0%{ transform:scale(0.4); opacity:0; }
+    60%{ transform:scale(1.15); opacity:1; }
+    100%{ transform:scale(1); opacity:1; }
+  }
+  .fx-check-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff;
+    font-size:13px; margin-right:6px; animation: checkPop .45s ease-out;
+  }
+
+  /* ---------- FX: UNLOCK (secret code correct) ---------- */
+  @keyframes unlockShake{
+    0%,100%{ transform:translateX(0); }
+    20%{ transform:translateX(-4px); }
+    40%{ transform:translateX(4px); }
+    60%{ transform:translateX(-3px); }
+    80%{ transform:translateX(3px); }
+  }
+  @keyframes unlockFlip{
+    0%{ transform:rotateY(0deg) scale(1); }
+    45%{ transform:rotateY(90deg) scale(1.3); }
+    55%{ transform:rotateY(90deg) scale(1.3); }
+    100%{ transform:rotateY(0deg) scale(1); }
+  }
+  .fx-unlock-icon{
+    display:inline-block; font-size:26px; animation: unlockFlip .55s ease-in-out, unlockShake .5s ease-in-out .55s;
+  }
+  .fx-unlock-flash{
+    animation: unlockShake .5s ease-in-out;
+    border-color: var(--green) !important;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .coin-toast, .coin-particle, .fx-success-glow, .fx-check-badge, .fx-unlock-icon, .fx-unlock-flash{
+      animation:none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= BOOT / LOGIN INTRO ================= -->
+<div id="bootOverlay">
+  <div class="grid-bg"></div>
+  <div class="starfield"></div>
+  <div class="scan"></div>
+  <div class="boot-content">
+    <div class="boot-portal">
+      <div class="portal-ring ring1"></div>
+      <div class="portal-ring ring2"></div>
+      <div class="portal-ring ring3"></div>
+      <div class="portal-core">E</div>
+    </div>
+    <div class="boot-title">EICT ONLINE</div>
+    <div class="boot-status" id="bootStatusText">Initializing systems…</div>
+    <div class="boot-progress-wrap">
+      <div class="boot-progress-bar"><div class="boot-progress-fill" id="bootProgressFill"></div></div>
+      <div class="boot-progress-pct" id="bootProgressPct">0%</div>
+    </div>
+    <div class="boot-agent-card" id="bootAgentCard" style="animation-delay:1.3s;">
+      <div>
+        <div class="agent-label">Agent</div>
+        <div class="agent-value" id="bootAgentName">—</div>
+      </div>
+      <div>
+        <div class="agent-label">Coins</div>
+        <div class="agent-value coins" id="bootAgentCoins">0</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="fxLayer"></div>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="badge-mark">E</div>
+    <h1>EICT Online</h1>
+    <p class="tagline">ICT Final 50-Day Mission · Enter your Agent name and access code to open your mission dashboard.</p>
+    <label class="field-label">Agent Name</label>
+    <input type="text" id="loginName" placeholder="e.g. Nimal Perera" autocomplete="off">
+    <label class="field-label" style="margin-top:14px;">Access Code</label>
+    <input type="text" id="loginCode" placeholder="e.g. 7K2P9Q" autocomplete="off" style="text-transform:uppercase;">
+    <div class="auth-error" id="loginError"></div>
+    <button class="btn btn-primary btn-block" id="loginBtn">🚀 Start / Resume Mission</button>
+    <p class="login-foot">Don't have an access code? Ask your teacher — they assign one to each student.</p>
+  </div>
+</div>
+
+<!-- ================= LOADING ================= -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div>Loading your mission data…</div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="badge-mark">E</div>
+        <div>
+          <div class="brand-name">EICT Online</div>
+          <div class="brand-sub">50-Day Mission</div>
+        </div>
+      </div>
+      <nav class="navlist" id="navlist">
+        <button data-view="dashboard" class="active"><span class="ic">🛰️</span> Dashboard</button>
+        <button data-view="missions"><span class="ic">🗂️</span> Missions</button>
+        <button data-view="plans"><span class="ic">📚</span> Study Plans</button>
+        <button data-view="leaderboard"><span class="ic">🏆</span> Leaderboard</button>
+        <button data-view="store"><span class="ic">🎬</span> Video Store</button>
+        <button data-view="rewards"><span class="ic">🎁</span> Rewards</button>
+        <button data-view="about"><span class="ic">ℹ️</span> How It Works</button>
+        <button data-view="stats"><span class="ic">📊</span> Mission Stats</button>
+        <button data-view="hof"><span class="ic">👑</span> Hall of Fame</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="agent-mini">
+          <div class="avatar-mini" id="avatarMini">A</div>
+          <div>
+            <div class="mini-name" id="miniName">Agent</div>
+            <div class="mini-rank" id="miniRank">🟢 Agent</div>
+          </div>
+        </div>
+        <span class="logout-link" id="logoutLink">Switch agent / log out</span>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <!-- ---------- DASHBOARD ---------- -->
+      <section class="view active" id="view-dashboard">
+        <div class="topbar">
+          <div>
+            <h2>Mission Control</h2>
+            <div class="sub">Welcome back, Agent. Here's where your mission stands today.</div>
+          </div>
+          <div class="xp-pill">
+            <div>
+              <div class="num" id="topXp">🪙 0</div>
+              <div class="lbl">Coins Earned</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-2" style="margin-bottom:18px;">
+          <div class="id-card">
+            <div class="row1">
+              <div class="who">
+                <div class="avatar-id" id="idAvatar">A</div>
+                <div>
+                  <div class="eyebrow">EICT Agent ID</div>
+                  <div class="name" id="idName">Agent</div>
+                </div>
+              </div>
+              <div class="rank-chip" id="idRankChip">🟢 Agent</div>
+            </div>
+            <div class="xp-bar-track"><div class="xp-bar-fill" id="idXpFill" style="width:0%"></div></div>
+            <div class="xp-line"><span id="idXpNow">🪙 0</span><span id="idXpNext">Next rank at 500 coins</span></div>
+            <div class="id-stats">
+              <div>Missions<span class="v" id="idMissions">0/0</span></div>
+              <div>Streak<span class="v" id="idStreak">0 🔥</span></div>
+              <div>Wallet<span class="v" id="idWallet">🪙0</span></div>
+              <div>Rewards<span class="v" id="idRewards">0</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3><span class="ic">🔥</span> Streak & Momentum</h3>
+            <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">Consecutive missions completed without a gap. Keep the chain alive — every 3rd and 5th streak mission pays a bonus.</p>
+            <div id="streakBadges" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+            <div class="small-note" id="streakNote" style="margin-top:10px;"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+          <h3><span class="ic">🖼️</span> Profile Picture</h3>
+          <div class="profile-row">
+            <div class="profile-avatar-big" id="profileAvatarPreview">A</div>
+            <div style="flex:1; min-width:240px;">
+              <input type="file" id="photoFileInput" accept="image/*" style="display:none">
+              <div class="link-row">
+                <button class="btn btn-teal btn-sm" id="choosePhotoBtn">📷 Upload Photo</button>
+                <button class="btn btn-ghost btn-sm" id="removePhotoBtn">Remove Photo</button>
+              </div>
+              <p class="small-note" id="photoStatusNote">Pick a photo from your phone or computer — it's resized and saved automatically, no links needed.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+          <h3><span class="ic">🗺️</span> Mission Chain</h3>
+          <div class="chain" id="dashChain"></div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <h3><span class="ic">⭐</span> Your Recognition (this week)</h3>
+            <div id="myAwards" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+          <div class="card">
+            <h3><span class="ic">🪙</span> Coin Cheat Sheet</h3>
+            <table class="simple">
+              <tr><td>Submit a mission</td><td class="mono">+100</td></tr>
+              <tr><td>Submit before deadline</td><td class="mono">+50</td></tr>
+              <tr><td>Score above 70% (after grading)</td><td class="mono">+50</td></tr>
+              <tr><td>Score above 85% (after grading)</td><td class="mono">+100</td></tr>
+              <tr><td>Enter correct secret code from discussion video</td><td class="mono">+50</td></tr>
+              <tr><td>Submit a Ranking Paper</td><td class="mono">+150</td></tr>
+              <tr><td>3 mission streak</td><td class="mono">+100</td></tr>
+              <tr><td>5 mission streak</td><td class="mono">+200</td></tr>
+            </table>
+            <p class="small-note" style="margin-top:10px;">🔑 The secret code only appears near the end of that mission's discussion video — it's how you unlock the marking scheme and your marked answer sheet, so it pays to actually watch it.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- MISSIONS ---------- -->
+      <section class="view" id="view-missions">
+        <div class="topbar">
+          <div>
+            <h2>Mission List</h2>
+            <div class="sub">Open the paper, paste your Drive answer sheet link to submit, then unlock the discussion video & marking scheme. Ranking Papers (purple) appear after certain missions.</div>
+          </div>
+        </div>
+        <div class="mission-list" id="missionListWrap"></div>
+      </section>
+
+      <!-- ---------- STUDY PLANS ---------- -->
+      <section class="view" id="view-plans">
+        <div class="topbar">
+          <div>
+            <h2>📚 Study Plans</h2>
+            <div class="sub">8 structured study plans. Each one unlocks once you submit a specific mission.</div>
+          </div>
+        </div>
+        <div class="grid grid-3" id="plansWrap"></div>
+      </section>
+
+      <!-- ---------- LEADERBOARD ---------- -->
+      <section class="view" id="view-leaderboard">
+        <div class="topbar">
+          <div>
+            <h2>🏆 Top Agents</h2>
+            <div class="sub">Live leaderboard across every device that has joined this mission.</div>
+          </div>
+          <div class="file-input-wrap">
+            <button class="btn btn-primary btn-sm" id="lbTabMarks" data-lbmode="marks">📝 Total Marks</button>
+            <button class="btn btn-ghost btn-sm" id="lbTabCoins" data-lbmode="coins">🪙 Coins Earned</button>
+          </div>
+        </div>
+        <div class="card" id="leaderboardCard"></div>
+      </section>
+
+      <!-- ---------- VIDEO STORE ---------- -->
+      <section class="view" id="view-store">
+        <div class="topbar">
+          <div>
+            <h2>🎬 Video Store</h2>
+            <div class="sub">Spend your coins on extra lesson videos your teacher uploads here.</div>
+          </div>
+          <div class="xp-pill">
+            <div>
+              <div class="num" id="storeWalletNum">🪙 0</div>
+              <div class="lbl">Your Wallet</div>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-3" id="storeWrap"></div>
+      </section>
+
+      <!-- ---------- REWARDS ---------- -->
+      <section class="view" id="view-rewards">
+        <div class="topbar">
+          <div>
+            <h2>🎁 Milestone Rewards</h2>
+            <div class="sub">Unlocked by missions completed, not coins spent — exclusive material and recognition you earn through consistency. See "How It Works" for details.</div>
+          </div>
+        </div>
+        <div class="grid grid-3" id="rewardsWrap"></div>
+      </section>
+
+      <!-- ---------- ABOUT / HOW IT WORKS ---------- -->
+      <section class="view" id="view-about">
+        <div class="topbar">
+          <div>
+            <h2>ℹ️ How EICT Online Works</h2>
+            <div class="sub">Everything about the program, your coins, the secret codes, and what rewards actually mean.</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="about-section">
+            <h3>🛰️ What is EICT Online?</h3>
+            <p>EICT Online is a 50-day mission-style revision program built to get you fully prepared for your ICT final exam. Instead of one big pile of revision, the syllabus is broken into bite-sized "missions" — each one a short paper covering a specific topic. You complete missions one at a time, in order, and earn 🪙 coins for every step you take.</p>
+          </div>
+          <div class="about-section">
+            <h3>🧭 How a mission works</h3>
+            <ul>
+              <li><strong>Step 1 — Submit:</strong> Open the mission paper, answer it, then paste a Google Drive link to your answer sheet. This instantly unlocks the next mission so you're never stuck waiting, and earns you coins right away.</li>
+              <li><strong>Step 2 — Watch, then unlock:</strong> Once you've submitted, you can open the discussion video. Near the end of it, your teacher reveals a <strong>secret code</strong> just for that mission. You must type that code into the app to unlock the marking scheme and your marked answer sheet — there's no way to see either one without actually watching the discussion. Getting the code right also earns you bonus coins.</li>
+              <li><strong>Step 3 — Your result:</strong> Your teacher reviews your submission and enters a score. Score-based bonus coins are added once that happens — there's no rush, you've already moved on to the next mission.</li>
+            </ul>
+          </div>
+          <div class="about-section">
+            <h3>🪙 What are coins, really?</h3>
+            <p>Coins are your in-app currency — you earn them for every mission action (submitting, unlocking the marking scheme with the right code, scoring well, keeping a streak alive). They do two things:</p>
+            <ul>
+              <li><strong>They set your Rank</strong> (from 🟢 Agent all the way up to 🏆 ICT Legend) and your position on the Coins leaderboard — this is based on your <em>total coins earned</em>, and spending coins never lowers it.</li>
+              <li><strong>They're spendable</strong> in the 🎬 Video Store to buy extra lesson videos your teacher uploads. Your spendable balance ("Wallet") goes down when you buy something, but your all-time earned total (and your rank) stays exactly the same.</li>
+            </ul>
+          </div>
+          <div class="about-section">
+            <h3>🔥 Streaks</h3>
+            <p>A "streak" is the number of missions you've completed back-to-back without a gap. Hit a 3-mission or 5-mission streak and you get a coin bonus automatically.</p>
+          </div>
+          <div class="about-section">
+            <h3>🏅 Ranking Papers</h3>
+            <p>After every couple of missions, a Ranking Paper appears — a combined paper covering everything so far. These are worth more coins and help you (and your teacher) see exactly where you stand before moving further. They never block your mission progress, so you can keep going even if one is still being graded.</p>
+          </div>
+          <div class="about-section">
+            <h3>📚 Study Plans</h3>
+            <p>There are structured study plans covering the full syllabus. You don't get them all at once — each plan unlocks automatically as you complete the missions tied to it, so you're always studying material that matches where you are in the program.</p>
+          </div>
+          <div class="about-section">
+            <h3>🎬 Video Store</h3>
+            <p>Your teacher can upload extra lesson videos to the store, each with its own coin price. If you've earned enough coins, you can buy one straight away — once purchased, it's yours to re-watch anytime from the Video Store page.</p>
+          </div>
+          <div class="about-section">
+            <h3>🎁 What are Milestone Rewards for?</h3>
+            <p>Milestone Rewards are separate from coins — they're unlocked purely by how many missions you've <strong>completed</strong>, not by how many coins you have or spend. They're <strong>extra academic material and recognition</strong>: bonus revision papers, a prediction paper for the final, an official completion certificate, and a permanent spot in the Hall of Fame. They exist to keep you motivated to finish — the real reward is walking into your final exam fully prepared.</p>
+          </div>
+          <div class="about-section">
+            <h3>🏆 Two leaderboards</h3>
+            <p>The Leaderboard page has two views: <strong>Total Marks</strong>, ranked by the actual marks your teacher has given you across every graded paper (the one that matters academically), and <strong>Coins Earned</strong>, ranked by how consistently you've been showing up and completing steps. Switch between them anytime.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- STATS (FOMO) ---------- -->
+      <section class="view" id="view-stats">
+        <div class="topbar">
+          <div>
+            <h2>📊 Mission Statistics</h2>
+            <div class="sub">See where the group stands — and who hasn't joined yet.</div>
+          </div>
+        </div>
+        <div class="card grid grid-4" id="statsWrap" style="text-align:center;"></div>
+        <div class="card" style="margin-top:18px;">
+          <h3><span class="ic">⭐</span> Weekly Recognition Awards</h3>
+          <div class="grid grid-3" id="weeklyAwardsWrap"></div>
+        </div>
+      </section>
+
+      <!-- ---------- HALL OF FAME ---------- -->
+      <section class="view" id="view-hof">
+        <div class="topbar">
+          <div>
+            <h2>👑 Hall of Fame</h2>
+            <div class="sub">End-of-program legends — students who completed every published mission.</div>
+          </div>
+        </div>
+        <div class="card" id="hofWrap"></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ---------- MODAL (shared by missions & ranking papers) ---------- -->
+<div class="modal-overlay" id="missionModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="badge-tag" id="modalTagDeadline">Deadline</div>
+        <h3 id="modalTitle">Mission</h3>
+        <div class="m-meta" id="modalTopic"></div>
+      </div>
+      <button class="modal-close" id="modalCloseBtn">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   EICT ONLINE — 50-Day Mission Engagement System (Student App)
+   Content (missions / study plans / ranking papers) now lives in
+   Firestore and is managed entirely from the teacher dashboard.
+   ============================================================ */
+
+const RANKS = [
+  {name:"Agent", icon:"🟢", min:0},
+  {name:"Specialist", icon:"🔵", min:500},
+  {name:"Senior Specialist", icon:"🟣", min:1000},
+  {name:"ICT Commander", icon:"🟠", min:1500},
+  {name:"ICT Elite", icon:"🔴", min:2200},
+  {name:"ICT Legend", icon:"🏆", min:3000},
+];
+
+let profile = null;          // current student's personal state
+let currentView = "dashboard";
+let openItem = null;         // {type:'mission'|'rp', id}
+let storageOK = true;
+
+let MISSIONS = [];
+let STUDY_PLANS = [];
+let RANKING_PAPERS = [];
+let STORE_VIDEOS = [];
+
+// Shown only when the teacher hasn't published anything in the "store"
+// Firestore collection yet, so the feature is visible/testable right away.
+// The moment a real item is added from the teacher dashboard, this dummy
+// card disappears automatically and is never saved to the database.
+const DUMMY_STORE_ITEM = {
+  id:'__dummy_demo_video',
+  title:'Sample: Networking Deep Dive (Demo)',
+  description:'This is a placeholder example so you can see how the store works. Your teacher will replace it with real lesson videos.',
+  price:150,
+  videoLink:'',
+  dummy:true,
+};
+
+/* ====================================================================
+   FIREBASE SETUP
+   ==================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyCuOviWnb_XuS7v9eR37ADH8K7Ps34lDRc",
+  authDomain: "eict-online-50-days-plan.firebaseapp.com",
+  projectId: "eict-online-50-days-plan",
+  storageBucket: "eict-online-50-days-plan.firebasestorage.app",
+  messagingSenderId: "729945269200",
+  appId: "1:729945269200:web:cd12dead6e2759ea780fd5"
+};
+
+let db = null;
+function initFirebase(){
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  }catch(e){
+    console.error("Firebase failed to initialize. Check firebaseConfig.", e);
+    alert("⚠️ This site isn't connected to its database yet.\nOpen the page source and paste your Firebase config into firebaseConfig.");
+  }
+}
+initFirebase();
+
+/* ---------------- storage helpers (Firestore) ---------------- */
+async function getStudent(key){
+  try{
+    const snap = await db.collection('students').doc(key).get();
+    return snap.exists ? snap.data() : null;
+  }catch(e){ console.error(e); storageOK = false; return null; }
+}
+async function setStudent(key, value){
+  try{
+    await db.collection('students').doc(key).set(value);
+    return true;
+  }catch(e){ console.error(e); storageOK = false; return false; }
+}
+async function listStudents(){
+  try{
+    const snap = await db.collection('students').get();
+    return snap.docs.map(d=>d.data());
+  }catch(e){ console.error(e); return []; }
+}
+
+async function loadCollection(name){
+  try{
+    // NOTE: we intentionally do NOT use .orderBy('order') here.
+    // Firestore's orderBy() silently EXCLUDES any document missing that
+    // field entirely — this is why only 1 of 2 missions was ever showing
+    // up (the second mission had no "order" value set). Fetching
+    // everything and sorting client-side guarantees every published
+    // mission/plan/paper always appears, order field or not.
+    const snap = await db.collection(name).get();
+    const docs = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(x=>x.active!==false);
+    docs.sort((a,b)=>{
+      const oa = (typeof a.order === 'number') ? a.order : 999999;
+      const ob = (typeof b.order === 'number') ? b.order : 999999;
+      if(oa !== ob) return oa - ob;
+      const ta = a.createdAt || 0, tb = b.createdAt || 0;
+      if(ta !== tb) return ta - tb;
+      return String(a.title||'').localeCompare(String(b.title||''));
+    });
+    return docs;
+  }catch(e){
+    console.error('Failed to load '+name, e);
+    return [];
+  }
+}
+async function loadAllContent(){
+  [MISSIONS, STUDY_PLANS, RANKING_PAPERS, STORE_VIDEOS] = await Promise.all([
+    loadCollection('missions'),
+    loadCollection('studyPlans'),
+    loadCollection('rankingPapers'),
+    loadCollection('store'),
+  ]);
+}
+
+function defaultProfile(name){
+  return {
+    name,
+    xp: 0,                    // lifetime coins earned — drives rank + "Coins Earned" leaderboard, never decreases on purchase
+    photoURL: '',
+    submissions: {},          // missionId -> {submitted, link, onTime, status, score, feedback, codeVerified, ts}
+    rpSubmissions: {},        // rpId -> {submitted, link, status, score, feedback, ts}
+    streakBonusGiven: {},     // {"3": true, "5": true} per current streak run (reset on break)
+    purchases: {},            // videoId -> {purchased:true, price, ts}
+    createdAt: Date.now(),
+  };
+}
+function ensureProfileShape(p){
+  p.submissions = p.submissions || {};
+  p.rpSubmissions = p.rpSubmissions || {};
+  p.streakBonusGiven = p.streakBonusGiven || {};
+  p.purchases = p.purchases || {};
+  p.photoURL = p.photoURL || '';
+  return p;
+}
+
+/* ---------------- coins / wallet ---------------- */
+// Spendable balance = everything ever earned minus everything ever spent.
+// Rank & the "Coins Earned" leaderboard always use the untouched p.xp total.
+function spentCoins(p){
+  return Object.values(p.purchases||{}).reduce((s,x)=> s + (x.purchased ? (x.price||0) : 0), 0);
+}
+function walletBalance(p){
+  return Math.max(0, (p.xp||0) - spentCoins(p));
+}
+function totalMarks(p){
+  let sum = 0;
+  Object.values(p.submissions||{}).forEach(s=>{ if(s && s.status==='graded' && typeof s.score==='number') sum += s.score; });
+  Object.values(p.rpSubmissions||{}).forEach(s=>{ if(s && s.status==='graded' && typeof s.score==='number') sum += s.score; });
+  return sum;
+}
+function gradedPaperCount(p){
+  let c = 0;
+  Object.values(p.submissions||{}).forEach(s=>{ if(s && s.status==='graded') c++; });
+  Object.values(p.rpSubmissions||{}).forEach(s=>{ if(s && s.status==='graded') c++; });
+  return c;
+}
+
+function rankFor(xp){
+  let r = RANKS[0];
+  for(const rk of RANKS){ if(xp >= rk.min) r = rk; }
+  return r;
+}
+function nextRankInfo(xp){
+  const idx = RANKS.findIndex(r=>r.name===rankFor(xp).name);
+  if(idx === RANKS.length-1) return {pct:100, label:"Max rank reached"};
+  const cur = RANKS[idx], nxt = RANKS[idx+1];
+  const pct = Math.min(100, Math.round(((xp-cur.min)/(nxt.min-cur.min))*100));
+  return {pct, label:`Next rank at ${nxt.min} coins`};
+}
+
+function completedCount(p){
+  return Object.values(p.submissions).filter(s=>s.submitted).length;
+}
+function currentStreak(p){
+  let s = 0;
+  for(const m of MISSIONS){
+    const sub = p.submissions[m.id];
+    if(sub && sub.submitted) s++; else break;
+  }
+  return s;
+}
+
+/* ---------------- avatar helper ---------------- */
+function avatarInnerHTML(p){
+  const initial = (p && p.name ? p.name.charAt(0).toUpperCase() : '?');
+  if(p && p.photoURL){
+    return `<img class="avatar-img" src="${escapeAttr(p.photoURL)}" onerror="this.parentElement.textContent='${initial}'">`;
+  }
+  return initial;
+}
+function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+/* ---------------- FX: animations ---------------- */
+function playBootAnimation(name, coins){
+  const overlay = document.getElementById('bootOverlay');
+  const statusEl = document.getElementById('bootStatusText');
+  const fillEl = document.getElementById('bootProgressFill');
+  const pctEl = document.getElementById('bootProgressPct');
+  const nameEl = document.getElementById('bootAgentName');
+  const coinsEl = document.getElementById('bootAgentCoins');
+  const totalCoins = Math.max(0, coins||0);
+
+  nameEl.textContent = (name||'Agent').split(' ')[0];
+  coinsEl.textContent = '0';
+  fillEl.style.width = '0%';
+  pctEl.textContent = '0%';
+
+  overlay.classList.remove('hide');
+  overlay.classList.add('show');
+  // Re-trigger entrance animations each time by forcing a reflow.
+  overlay.querySelectorAll('.boot-title, .portal-core, .boot-agent-card').forEach(el=>{
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.animation = '';
+  });
+
+  const statusSteps = [
+    'Initializing systems…',
+    'Authenticating agent…',
+    'Loading mission data…',
+    'Syncing coin balance…',
+    'Access granted ✔'
+  ];
+  const totalDuration = 1800; // ms — full boot sequence length
+  const startTime = performance.now();
+
+  return new Promise(resolve=>{
+    function tick(now){
+      const elapsed = now - startTime;
+      const pct = Math.min(100, Math.round((elapsed/totalDuration)*100));
+      fillEl.style.width = pct+'%';
+      pctEl.textContent = pct+'%';
+      coinsEl.textContent = Math.round((pct/100)*totalCoins).toLocaleString();
+
+      const stepIdx = Math.min(statusSteps.length-1, Math.floor((pct/100)*statusSteps.length));
+      if(statusEl.textContent !== statusSteps[stepIdx]) statusEl.textContent = statusSteps[stepIdx];
+
+      if(elapsed < totalDuration){
+        requestAnimationFrame(tick);
+      } else {
+        fillEl.style.width = '100%';
+        pctEl.textContent = '100%';
+        coinsEl.textContent = totalCoins.toLocaleString();
+        statusEl.textContent = statusSteps[statusSteps.length-1];
+        setTimeout(()=>{
+          overlay.classList.add('hide');
+          setTimeout(()=>{ overlay.classList.remove('show','hide'); resolve(); }, 620);
+        }, 380);
+      }
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+function coinBurst(amount, label){
+  if(!amount) return;
+  const layer = document.getElementById('fxLayer');
+  const toast = document.createElement('div');
+  toast.className = 'coin-toast';
+  toast.textContent = `🪙 +${amount}${label ? ' — '+label : ''}`;
+  layer.appendChild(toast);
+  setTimeout(()=>toast.remove(), 1700);
+
+  const count = Math.min(6, Math.max(3, Math.round(amount/40)));
+  for(let i=0;i<count;i++){
+    const p = document.createElement('div');
+    p.className = 'coin-particle';
+    p.textContent = '🪙';
+    const spread = (Math.random()-0.5)*160;
+    p.style.left = `calc(50% + ${spread}px)`;
+    p.style.animationDelay = (Math.random()*0.25)+'s';
+    layer.appendChild(p);
+    setTimeout(()=>p.remove(), 1700);
+  }
+}
+
+function flashSuccess(el){
+  if(!el) return;
+  el.classList.remove('fx-success-glow');
+  void el.offsetWidth;
+  el.classList.add('fx-success-glow');
+  setTimeout(()=>el.classList.remove('fx-success-glow'), 950);
+}
+
+function playUnlockAnimation(inputEl){
+  if(!inputEl) return;
+  inputEl.classList.remove('fx-unlock-flash');
+  void inputEl.offsetWidth;
+  inputEl.classList.add('fx-unlock-flash');
+  const icon = document.createElement('span');
+  icon.className = 'fx-unlock-icon';
+  icon.textContent = '🔓';
+  inputEl.parentElement.appendChild(icon);
+  setTimeout(()=>{ inputEl.classList.remove('fx-unlock-flash'); icon.remove(); }, 1100);
+}
+
+
+const SESSION_KEY = 'eict_session';
+
+function showLoginError(msg){
+  const box = document.getElementById('loginError');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+function clearLoginError(){
+  const box = document.getElementById('loginError');
+  box.style.display = 'none';
+  box.textContent = '';
+}
+
+document.getElementById('loginBtn').addEventListener('click', ()=>doLogin());
+document.getElementById('loginName').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('loginCode').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+
+async function doLogin(){
+  clearLoginError();
+  const nameInput = document.getElementById('loginName');
+  const codeInput = document.getElementById('loginCode');
+  const name = nameInput.value.trim();
+  const code = codeInput.value.trim().toUpperCase();
+
+  if(!name){ nameInput.style.borderColor = 'var(--red)'; nameInput.focus(); return; }
+  if(!code){ codeInput.style.borderColor = 'var(--red)'; codeInput.focus(); return; }
+  if(!db){ alert("⚠️ Not connected to the database yet. Ask your teacher to finish the setup."); return; }
+
+  const loginBtn = document.getElementById('loginBtn');
+  loginBtn.disabled = true; loginBtn.textContent = 'Checking…';
+
+  const key = name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+  const existing = await getStudent(key);
+
+  loginBtn.disabled = false; loginBtn.textContent = '🚀 Start / Resume Mission';
+
+  if(!existing || !existing.accessCode){
+    showLoginError("We couldn't find that name registered by your teacher. Check the spelling, or ask your teacher to add you.");
+    return;
+  }
+  if(String(existing.accessCode).toUpperCase() !== code){
+    showLoginError("That access code doesn't match. Double-check with your teacher.");
+    return;
+  }
+
+  await enterApp(key, name, existing);
+}
+
+async function enterApp(key, name, existingDoc){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'flex';
+
+  let data = existingDoc;
+  if(!data){ data = await getStudent(key); }
+  if(!data){
+    // Session pointed at a student that no longer exists — bail back to login.
+    sessionStorage.removeItem(SESSION_KEY);
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    showLoginError('Your session expired or your profile was removed. Please log in again.');
+    return;
+  }
+  ensureProfileShape(data);
+  profile = data;
+  profile._key = key;
+
+  // Remember this login only for the current browser tab — cleared on tab close.
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({key, name}));
+
+  await loadAllContent();
+
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  renderAll();
+  playBootAnimation(profile.name || name, profile.xp || 0);
+}
+
+async function tryResumeSession(){
+  let saved = null;
+  try{ saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); }catch(e){ saved = null; }
+  if(!saved || !saved.key){ return; }
+  if(!db){ return; }
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'flex';
+  await enterApp(saved.key, saved.name, null);
+}
+tryResumeSession();
+
+document.getElementById('logoutLink').addEventListener('click', ()=>{
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginName').value = '';
+  document.getElementById('loginCode').value = '';
+  clearLoginError();
+  profile = null;
+});
+
+async function saveProfile(){
+  if(!profile) return;
+  const {_key, ...toSave} = profile;
+  await setStudent(profile._key, toSave);
+}
+
+/* ---------------- nav ---------------- */
+document.getElementById('navlist').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-view]');
+  if(!btn) return;
+  document.querySelectorAll('#navlist button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentView = btn.dataset.view;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+currentView).classList.add('active');
+  renderView(currentView);
+});
+
+/* ---------------- render orchestration ---------------- */
+function renderAll(){
+  renderShell();
+  renderDashboard();
+  renderMissionsList();
+}
+function renderView(name){
+  if(name==='dashboard') renderDashboard();
+  if(name==='missions') renderMissionsList();
+  if(name==='plans') renderStudyPlans();
+  if(name==='leaderboard') renderLeaderboard();
+  if(name==='store') renderStore();
+  if(name==='rewards') renderRewards();
+  if(name==='stats') renderStats();
+  if(name==='hof') renderHallOfFame();
+}
+
+function renderShell(){
+  document.getElementById('avatarMini').innerHTML = avatarInnerHTML(profile);
+  document.getElementById('miniName').textContent = profile.name;
+  const r = rankFor(profile.xp);
+  document.getElementById('miniRank').textContent = `${r.icon} ${r.name}`;
+}
+
+/* ---------------- DASHBOARD ---------------- */
+function renderDashboard(){
+  renderShell();
+  document.getElementById('topXp').textContent = '🪙 ' + profile.xp;
+  document.getElementById('idName').textContent = profile.name;
+  document.getElementById('idAvatar').innerHTML = avatarInnerHTML(profile);
+  const r = rankFor(profile.xp);
+  document.getElementById('idRankChip').innerHTML = `${r.icon} ${r.name}`;
+  const ni = nextRankInfo(profile.xp);
+  document.getElementById('idXpFill').style.width = ni.pct + '%';
+  document.getElementById('idXpNow').textContent = '🪙 ' + profile.xp;
+  document.getElementById('idXpNext').textContent = ni.label;
+  document.getElementById('idMissions').textContent = completedCount(profile) + '/' + MISSIONS.length;
+  document.getElementById('idStreak').textContent = currentStreak(profile) + ' 🔥';
+  document.getElementById('idWallet').textContent = '🪙' + walletBalance(profile);
+  document.getElementById('idRewards').textContent = unlockedRewardCount(profile);
+
+  renderProfilePicCard();
+
+  // streak badges
+  const streak = currentStreak(profile);
+  const milestones = [2,3,5,Math.max(MISSIONS.length,1)];
+  const sb = document.getElementById('streakBadges');
+  sb.innerHTML = [...new Set(milestones)].map(m=>{
+    const reached = streak >= m;
+    const label = m===MISSIONS.length ? 'Perfect Streak' : m+' Mission Streak';
+    return `<span class="streak-flame" style="background:${reached?'var(--amber-soft)':'var(--surface-soft)'}; padding:6px 12px; border-radius:20px; font-size:12px; color:${reached?'#a26a06':'var(--ink-soft)'};">🔥 ${label}</span>`;
+  }).join('');
+  document.getElementById('streakNote').textContent = streak===0
+    ? "Submit your next mission on time to start a streak."
+    : `You're on a ${streak}-mission streak. Don't break the chain!`;
+
+  // mission chain
+  const chain = document.getElementById('dashChain');
+  chain.innerHTML = '';
+  if(MISSIONS.length===0){
+    chain.innerHTML = `<div class="empty-note">No missions published yet — check back soon!</div>`;
+  } else {
+    MISSIONS.forEach((m,i)=>{
+      const sub = profile.submissions[m.id];
+      const status = sub && sub.submitted ? 'done' : (isUnlocked(m.id) ? 'current' : 'locked');
+      const node = document.createElement('div');
+      node.className = 'chain-node';
+      node.onclick = ()=>openMission(m.id);
+      node.innerHTML = `<div class="chain-circle ${status}">${status==='done'?'✓':(i+1)}</div><div class="chain-label">${(m.title||'').split('—')[1]?.trim()||m.title}</div>`;
+      chain.appendChild(node);
+      if(i < MISSIONS.length-1){
+        const line = document.createElement('div');
+        line.className = 'chain-line' + (status==='done' ? ' done' : '');
+        chain.appendChild(line);
+      }
+    });
+  }
+
+  // weekly awards relevant to me
+  computeWeeklyAwards().then(awards=>{
+    const mine = awards.filter(a=>a.who && a.who.toLowerCase()===profile.name.toLowerCase());
+    const wrap = document.getElementById('myAwards');
+    if(mine.length===0){
+      wrap.innerHTML = `<div class="small-note">No awards yet this week — keep submitting and watching discussions to earn recognition.</div>`;
+    } else {
+      wrap.innerHTML = mine.map(a=>`<div style="display:flex; gap:10px; align-items:center; background:var(--surface-soft); padding:10px 12px; border-radius:10px;"><span style="font-size:18px;">${a.icon}</span><div><div style="font-weight:700; font-size:13px;">${a.title}</div><div style="font-size:11px; color:var(--ink-soft);">${a.why}</div></div></div>`).join('');
+    }
+  });
+}
+
+function renderProfilePicCard(){
+  document.getElementById('profileAvatarPreview').innerHTML = avatarInnerHTML(profile);
+  const note = document.getElementById('photoStatusNote');
+  if(note) note.textContent = "Pick a photo from your phone or computer — it's resized and saved automatically, no links needed.";
+}
+
+// Resize + compress an uploaded image client-side into a small JPEG data URL
+// so it can be stored directly on the student's profile document — no
+// Google Drive sharing links, no separate storage bucket to configure.
+function fileToCompressedDataURL(file, maxSize=220, quality=0.75){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read file'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not read image'));
+      img.onload = () => {
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side)/2, sy = (img.height - side)/2;
+        const canvas = document.createElement('canvas');
+        canvas.width = maxSize; canvas.height = maxSize;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, maxSize, maxSize);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('choosePhotoBtn').addEventListener('click', ()=>{
+  document.getElementById('photoFileInput').click();
+});
+document.getElementById('photoFileInput').addEventListener('change', async (e)=>{
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+  const note = document.getElementById('photoStatusNote');
+  note.textContent = 'Uploading…';
+  try{
+    let quality = 0.75, maxSize = 220, dataUrl = await fileToCompressedDataURL(file, maxSize, quality);
+    // Firestore fields have a size limit — if it's still too big, compress harder.
+    while(dataUrl.length > 700000 && quality > 0.3){
+      quality -= 0.15;
+      dataUrl = await fileToCompressedDataURL(file, maxSize, quality);
+    }
+    if(dataUrl.length > 900000){
+      note.textContent = 'That image is too large even after compression — please try a smaller photo.';
+      return;
+    }
+    profile.photoURL = dataUrl;
+    await saveProfile();
+    renderShell();
+    renderDashboard();
+    note.textContent = 'Photo updated ✓';
+  }catch(err){
+    console.error(err);
+    note.textContent = 'Could not process that image — please try another file.';
+  }
+});
+document.getElementById('removePhotoBtn').addEventListener('click', async ()=>{
+  profile.photoURL = '';
+  await saveProfile();
+  renderShell();
+  renderDashboard();
+  const note = document.getElementById('photoStatusNote');
+  if(note) note.textContent = 'Photo removed.';
+});
+
+function isUnlocked(missionId){
+  const idx = MISSIONS.findIndex(m=>m.id===missionId);
+  if(idx <= 0) return true;
+  const prev = MISSIONS[idx-1];
+  const sub = profile.submissions[prev.id];
+  return !!(sub && sub.submitted);
+}
+function isRPUnlocked(rp){
+  if(!rp.afterMissionId) return true;
+  const sub = profile.submissions[rp.afterMissionId];
+  return !!(sub && sub.submitted);
+}
+function isPlanUnlocked(plan){
+  if(!plan.unlocksAfterMissionId) return true;
+  const sub = profile.submissions[plan.unlocksAfterMissionId];
+  return !!(sub && sub.submitted);
+}
+function missionTitleFor(id){
+  const m = MISSIONS.find(x=>x.id===id);
+  return m ? m.title : 'an earlier mission';
+}
+
+function getRewardDefs(){
+  const total = Math.max(MISSIONS.length, 1);
+  return [
+    {need: Math.max(1, Math.ceil(total*0.5)), icon:'🔓', title:'Exclusive Revision Paper', desc:'A bonus revision paper covering the toughest topics so far.'},
+    {need: Math.max(1, Math.ceil(total*0.75)), icon:'🔓', title:'Special Prediction Paper', desc:'Instructor-curated prediction paper for the upcoming final.'},
+    {need: total, icon:'🎓', title:'Mission Completion Certificate', desc:'An official EICT Online certificate of completion.'},
+    {need: total, icon:'👑', title:'Hall of Fame Recognition', desc:'Your name listed permanently among the program legends.'},
+  ];
+}
+function unlockedRewardCount(p){
+  const c = completedCount(p);
+  return getRewardDefs().filter(r=>c>=r.need).length;
+}
+
+/* ---------------- MISSIONS LIST (unified with Ranking Papers) ---------------- */
+function buildUnifiedList(){
+  const items = [];
+  MISSIONS.forEach(m=>{
+    items.push({type:'mission', data:m});
+    RANKING_PAPERS.forEach(rp=>{
+      if(rp.afterMissionId === m.id) items.push({type:'rp', data:rp});
+    });
+  });
+  return items;
+}
+
+function renderMissionsList(){
+  const wrap = document.getElementById('missionListWrap');
+  if(MISSIONS.length===0){
+    wrap.innerHTML = `<div class="empty-note">Your teacher hasn't published any missions yet — check back soon!</div>`;
+    return;
+  }
+  const items = buildUnifiedList();
+  wrap.innerHTML = '';
+  items.forEach((item,i)=>{
+    const row = document.createElement('div');
+    if(item.type==='mission'){
+      const m = item.data;
+      const idx = MISSIONS.findIndex(x=>x.id===m.id);
+      const sub = profile.submissions[m.id];
+      const done = sub && sub.submitted;
+      const unlocked = isUnlocked(m.id);
+      const numClass = done ? 'done' : (unlocked ? 'todo' : 'locked');
+      let statusClass, statusText;
+      if(done){
+        statusClass = sub.status==='graded' ? 'status-graded' : 'status-pending';
+        statusText = sub.status==='graded' ? 'Graded' : 'Submitted · Pending review';
+      } else {
+        statusClass = unlocked ? 'status-todo' : 'status-locked';
+        statusText = unlocked ? 'Available' : 'Locked';
+      }
+      row.className = 'mission-row';
+      row.onclick = ()=>openMission(m.id);
+      row.innerHTML = `
+        <div class="m-num ${numClass}">${done?'✓':(idx+1)}</div>
+        <div>
+          <div class="m-title">${m.title}</div>
+          <div class="m-meta">${m.topic||''}${m.deadline?(' · Deadline: '+m.deadline):''}</div>
+        </div>
+        <div class="m-status ${statusClass}">${statusText}</div>
+      `;
+    } else {
+      const rp = item.data;
+      const sub = profile.rpSubmissions[rp.id];
+      const done = sub && sub.submitted;
+      const unlocked = isRPUnlocked(rp);
+      let statusClass, statusText;
+      if(done){
+        statusClass = sub.status==='graded' ? 'status-graded' : 'status-pending';
+        statusText = sub.status==='graded' ? 'Graded' : 'Submitted · Pending review';
+      } else {
+        statusClass = unlocked ? 'status-todo' : 'status-locked';
+        statusText = unlocked ? 'Available' : 'Locked';
+      }
+      row.className = 'mission-row rp-row';
+      row.onclick = ()=>openRP(rp.id);
+      row.innerHTML = `
+        <div class="m-num rp">🏅</div>
+        <div>
+          <div class="rp-tag">Ranking Paper</div>
+          <div class="m-title">${rp.title}</div>
+          <div class="m-meta">${rp.topic||'Covers everything up to this point'}${rp.deadline?(' · Deadline: '+rp.deadline):''}</div>
+        </div>
+        <div class="m-status ${statusClass}">${statusText}</div>
+      `;
+    }
+    wrap.appendChild(row);
+  });
+}
+
+/* ---------------- STUDY PLANS ---------------- */
+function renderStudyPlans(){
+  const wrap = document.getElementById('plansWrap');
+  if(STUDY_PLANS.length===0){
+    wrap.innerHTML = `<div class="empty-note">Your teacher hasn't added any study plans yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = STUDY_PLANS.map((p,i)=>{
+    const unlocked = isPlanUnlocked(p);
+    return `<div class="plan-card ${unlocked?'':'locked'}">
+      <div class="plan-num">${p.order ?? (i+1)}</div>
+      <h4>${p.title}</h4>
+      <p>${p.description||''}</p>
+      <p class="small-note">${unlocked ? 'Unlocked' : `Unlocks after you submit "${missionTitleFor(p.unlocksAfterMissionId)}"`}</p>
+      ${unlocked ? `<button class="btn btn-teal btn-sm" data-plan-link="${escapeAttr(p.link||'')}">📘 Open Study Plan</button>` : ''}
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('[data-plan-link]').forEach(btn=>{
+    btn.addEventListener('click', ()=>openLinkOrWarn(btn.dataset.planLink, 'study plan'));
+  });
+}
+
+/* ---------------- shared link opener ---------------- */
+function openLinkOrWarn(link, label){
+  if(!link){ alert(`Your teacher hasn't added the ${label} yet.`); return; }
+  window.open(link, '_blank', 'noopener');
+}
+
+/* ---------------- MISSION MODAL ---------------- */
+function openMission(id){
+  if(!isUnlocked(id)){
+    const idx = MISSIONS.findIndex(m=>m.id===id);
+    alert(`🔒 This mission is locked.\nComplete "${MISSIONS[idx-1]?.title||'the previous mission'}" first to unlock it.`);
+    return;
+  }
+  openItem = {type:'mission', id};
+  renderMissionModal(id);
+  document.getElementById('missionModal').classList.add('show');
+}
+function openRP(id){
+  const rp = RANKING_PAPERS.find(r=>r.id===id);
+  if(!isRPUnlocked(rp)){
+    alert(`🔒 ${rp.title} unlocks after you submit "${missionTitleFor(rp.afterMissionId)}".`);
+    return;
+  }
+  openItem = {type:'rp', id};
+  renderRPModal(id);
+  document.getElementById('missionModal').classList.add('show');
+}
+document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+document.getElementById('missionModal').addEventListener('click', (e)=>{ if(e.target.id==='missionModal') closeModal(); });
+function closeModal(){
+  document.getElementById('missionModal').classList.remove('show');
+  openItem = null;
+  renderDashboard();
+  if(currentView==='missions') renderMissionsList();
+  if(currentView==='plans') renderStudyPlans();
+}
+
+function renderMissionModal(id){
+  const idx = MISSIONS.findIndex(x=>x.id===id);
+  const m = MISSIONS[idx];
+  const sub = profile.submissions[id] || {submitted:false, status:null, score:null, codeVerified:false};
+  document.getElementById('modalTagDeadline').textContent = m.deadline ? ('Deadline: ' + m.deadline) : 'Mission';
+  document.getElementById('modalTitle').textContent = m.title;
+  document.getElementById('modalTopic').textContent = m.topic || '';
+
+  const codeVerified = !!sub.codeVerified;
+  const hasCode = !!(m.code && String(m.code).trim());
+
+  const submitBlock = `
+    <div class="step-block ${sub.submitted ? 'unlocked' : ''}">
+      <div class="step-head"><span class="dot"></span> Step 1 — Submit Your Answer Sheet</div>
+      <div class="file-input-wrap">
+        <button class="btn btn-ghost btn-sm" id="openPaperBtn">📄 Open Paper</button>
+        ${sub.submitted ? `<span class="pill-info">Submitted ✓</span>` : ''}
+      </div>
+      ${sub.submitted ? `
+        <p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link||'#')}" target="_blank" rel="noopener">${sub.link||''}</a></p>
+        <div class="xp-toast-list">${sub.onTime ? `<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag">🪙+50 On-time</span>`:`<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag" style="background:var(--ink-soft);">Late — no on-time bonus</span>`}</div>
+      ` : `
+        <label class="field-label" style="margin-top:10px;">Paste your Google Drive answer sheet link</label>
+        <div class="link-row">
+          <input type="text" id="answerLinkInput" placeholder="https://drive.google.com/file/d/.../view">
+          <button class="btn btn-primary btn-sm" id="submitBtn">Submit</button>
+        </div>
+        <p class="small-note">${m.dueAt
+          ? `Submitting earns 🪙+100 coins, plus 🪙+50 if you submit before <strong>${new Date(m.dueAt).toLocaleString(undefined,{dateStyle:'medium', timeStyle:'short'})}</strong>. This also unlocks the next mission right away — your teacher will grade it separately.`
+          : `Submitting earns 🪙+100 coins, plus 🪙+50 since it's before the ${m.deadline||'deadline'}. This also unlocks the next mission right away — your teacher will grade it separately.`}</p>
+      `}
+    </div>`;
+
+  const videoBlock = `
+    <div class="step-block ${sub.submitted ? 'unlocked' : 'locked'}">
+      <div class="step-head"><span class="dot"></span> Step 2 — Watch the Discussion & Unlock Your Results</div>
+      ${sub.submitted ? `
+        <div class="file-input-wrap">
+          <button class="btn btn-ghost btn-sm" id="watchVideoBtn">▶️ Open Discussion Video</button>
+        </div>
+        ${!hasCode ? `
+          <p class="small-note" style="margin-top:10px;">Your teacher hasn't set a secret code for this mission yet — the marking scheme and marked answer sheet will unlock automatically once they do.</p>
+          <div class="file-input-wrap" style="margin-top:8px;">
+            <button class="btn btn-ghost btn-sm" id="markingSchemeBtn">📘 Open Marking Scheme</button>
+            <button class="btn btn-ghost btn-sm" id="markedSheetBtn">📝 Open Marked Answer Sheet</button>
+          </div>
+        ` : codeVerified ? `
+          <div class="small-note" style="margin-top:10px; color:var(--green); font-weight:700;">🔓 Code verified — marking scheme &amp; marked answer sheet unlocked!</div>
+          <div class="file-input-wrap" style="margin-top:8px;">
+            <button class="btn btn-ghost btn-sm" id="markingSchemeBtn">📘 Open Marking Scheme</button>
+            <button class="btn btn-ghost btn-sm" id="markedSheetBtn">📝 Open Marked Answer Sheet</button>
+          </div>
+        ` : `
+          <p class="small-note" style="margin-top:10px;">🔒 The marking scheme and your marked answer sheet are locked. Watch the discussion video above — near the end your teacher reveals a secret code. Enter it here to unlock both and earn 🪙+50 coins.</p>
+          <div class="code-row">
+            <input type="text" id="codeInput" placeholder="Enter secret code">
+            <button class="btn btn-amber btn-sm" id="codeBtn">Unlock</button>
+          </div>
+        `}
+      ` : `<p class="small-note">Submit your answer sheet to unlock the discussion video.</p>`}
+    </div>`;
+
+  const resultBlock = `
+    <div class="step-block ${sub.submitted ? 'unlocked' : 'locked'}">
+      <div class="step-head"><span class="dot"></span> Step 3 — Your Result</div>
+      ${!sub.submitted ? `<p class="small-note">Submit your answer sheet first.</p>` : (
+        sub.status==='graded' ? `
+          <p class="small-note">Recorded score: <strong>${sub.score}%</strong></p>
+          ${sub.feedback ? `<p class="small-note">Teacher's note: "${sub.feedback}"</p>` : ''}
+          <div class="xp-toast-list">
+            ${sub.score>85 ? `<span class="xp-tag">🪙+100 Score &gt; 85%</span>` : (sub.score>70 ? `<span class="xp-tag">🪙+50 Score &gt; 70%</span>` : `<span class="xp-tag" style="background:var(--ink-soft);">No coin bonus</span>`)}
+          </div>
+        ` : `<p class="small-note">⏳ Awaiting your teacher's review. Score-based bonus coins will be added once graded.</p>`
+      )}
+    </div>`;
+
+  document.getElementById('modalBody').innerHTML = submitBlock + videoBlock + resultBlock;
+
+  document.getElementById('openPaperBtn').addEventListener('click', ()=>openLinkOrWarn(m.paperLink, 'paper'));
+
+  const submitBtn = document.getElementById('submitBtn');
+  if(submitBtn) submitBtn.addEventListener('click', ()=>handleSubmitMission(id));
+
+  const watchVideoBtn = document.getElementById('watchVideoBtn');
+  if(watchVideoBtn) watchVideoBtn.addEventListener('click', ()=>openLinkOrWarn(m.videoLink, 'discussion video'));
+
+  const markingBtn = document.getElementById('markingSchemeBtn');
+  if(markingBtn) markingBtn.addEventListener('click', ()=>openLinkOrWarn(m.markingSchemeLink, 'marking scheme'));
+
+  const markedSheetBtn = document.getElementById('markedSheetBtn');
+  if(markedSheetBtn) markedSheetBtn.addEventListener('click', ()=>openLinkOrWarn(m.markedAnswerSheetLink, 'marked answer sheet'));
+
+  const codeBtn = document.getElementById('codeBtn');
+  if(codeBtn) codeBtn.addEventListener('click', ()=>handleCode(id, m));
+}
+
+async function handleSubmitMission(id){
+  const input = document.getElementById('answerLinkInput');
+  const link = input.value.trim();
+  if(!link || !/^https?:\/\//i.test(link)){
+    input.style.borderColor = 'var(--red)';
+    input.placeholder = 'Paste a valid link starting with https://';
+    return;
+  }
+  const m = MISSIONS.find(x=>x.id===id);
+  const sub = profile.submissions[id] || {};
+  sub.submitted = true;
+  sub.link = link;
+  // If the teacher set an exact deadline (dueAt), only award the on-time bonus
+  // when the submission happens at or before that moment. No dueAt set = always on-time,
+  // matching how missions behaved before deadlines were tracked precisely.
+  let onTime = true;
+  if(m && m.dueAt){
+    const dueTs = new Date(m.dueAt).getTime();
+    if(!isNaN(dueTs)) onTime = Date.now() <= dueTs;
+  }
+  sub.onTime = onTime;
+  sub.status = 'pending';
+  sub.ts = Date.now();
+  profile.submissions[id] = sub;
+  let gained = 100;
+  profile.xp += 100;
+  if(sub.onTime){ profile.xp += 50; gained += 50; }
+  const streakGain = await maybeStreakBonus();
+  await saveProfile();
+
+  const submitBtnEl = document.getElementById('submitBtn');
+  flashSuccess(submitBtnEl ? submitBtnEl.closest('.step-block') : null);
+  coinBurst(gained, sub.onTime ? 'Mission Submitted 🚀' : 'Mission Submitted (Late) 🚀');
+  if(streakGain) setTimeout(()=>coinBurst(streakGain, 'Streak Bonus 🔥'), 700);
+
+  renderMissionModal(id);
+  renderDashboard();
+  renderMissionsList();
+}
+
+async function handleCode(id, mission){
+  const input = document.getElementById('codeInput');
+  const val = input.value.trim().toUpperCase();
+  if(mission && mission.code && val === String(mission.code).trim().toUpperCase()){
+    const sub = profile.submissions[id] || {};
+    sub.codeVerified = true;
+    profile.submissions[id] = sub;
+    profile.xp += 50;
+    await saveProfile();
+    playUnlockAnimation(input);
+    coinBurst(50, 'Code Unlocked 🔓');
+    renderMissionModal(id);
+    renderDashboard();
+  } else {
+    input.style.borderColor = 'var(--red)';
+    input.placeholder = 'Incorrect code — try again';
+    input.value = '';
+  }
+}
+
+async function maybeStreakBonus(){
+  const streak = currentStreak(profile);
+  let gained = 0;
+  if(streak===3 && !profile.streakBonusGiven['3']){ profile.xp += 100; profile.streakBonusGiven['3']=true; gained = 100; }
+  if(streak===5 && !profile.streakBonusGiven['5']){ profile.xp += 200; profile.streakBonusGiven['5']=true; gained = 200; }
+  if(streak===0){ profile.streakBonusGiven = {}; }
+  return gained;
+}
+
+/* ---------------- RANKING PAPER MODAL ---------------- */
+function renderRPModal(id){
+  const rp = RANKING_PAPERS.find(x=>x.id===id);
+  const sub = profile.rpSubmissions[id] || {submitted:false, status:null, score:null};
+  document.getElementById('modalTagDeadline').textContent = rp.deadline ? ('Deadline: ' + rp.deadline) : 'Ranking Paper';
+  document.getElementById('modalTitle').textContent = rp.title;
+  document.getElementById('modalTopic').textContent = rp.topic || 'Covers everything up to this point';
+
+  const submitBlock = `
+    <div class="step-block ${sub.submitted ? 'unlocked' : ''}">
+      <div class="step-head"><span class="dot"></span> Step 1 — Submit Your Answer Sheet</div>
+      <div class="file-input-wrap">
+        <button class="btn btn-ghost btn-sm" id="openRPPaperBtn">📄 Open Paper</button>
+        ${sub.submitted ? `<span class="pill-info">Submitted ✓</span>` : ''}
+      </div>
+      ${sub.submitted ? `
+        <p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link||'#')}" target="_blank" rel="noopener">${sub.link||''}</a></p>
+        <div class="xp-toast-list"><span class="xp-tag">🪙+150 Submit</span></div>
+      ` : `
+        <label class="field-label" style="margin-top:10px;">Paste your Google Drive answer sheet link</label>
+        <div class="link-row">
+          <input type="text" id="rpAnswerLinkInput" placeholder="https://drive.google.com/file/d/.../view">
+          <button class="btn btn-purple btn-sm" id="rpSubmitBtn">Submit</button>
+        </div>
+        <p class="small-note">Submitting earns 🪙+150 coins. Ranking papers don't block your mission progress.</p>
+      `}
+    </div>`;
+
+  const reviewBlock = `
+    <div class="step-block ${sub.submitted ? 'unlocked' : 'locked'}">
+      <div class="step-head"><span class="dot"></span> Step 2 — Marking Scheme & Result</div>
+      ${sub.submitted ? `
+        <div class="file-input-wrap">
+          <button class="btn btn-ghost btn-sm" id="rpMarkingBtn">📘 Open Marking Scheme</button>
+        </div>
+        ${sub.status==='graded' ? `
+          <p class="small-note" style="margin-top:10px;">Recorded score: <strong>${sub.score}%</strong></p>
+          ${sub.feedback ? `<p class="small-note">Teacher's note: "${sub.feedback}"</p>` : ''}
+          <div class="xp-toast-list">
+            ${sub.score>85 ? `<span class="xp-tag">🪙+100 Score &gt; 85%</span>` : (sub.score>70 ? `<span class="xp-tag">🪙+50 Score &gt; 70%</span>` : `<span class="xp-tag" style="background:var(--ink-soft);">No coin bonus</span>`)}
+          </div>
+        ` : `<p class="small-note" style="margin-top:10px;">⏳ Awaiting your teacher's review.</p>`}
+      ` : `<p class="small-note">Submit your answer sheet first.</p>`}
+    </div>`;
+
+  document.getElementById('modalBody').innerHTML = submitBlock + reviewBlock;
+
+  document.getElementById('openRPPaperBtn').addEventListener('click', ()=>openLinkOrWarn(rp.paperLink, 'paper'));
+  const rpSubmitBtn = document.getElementById('rpSubmitBtn');
+  if(rpSubmitBtn) rpSubmitBtn.addEventListener('click', ()=>handleSubmitRP(id));
+  const rpMarkingBtn = document.getElementById('rpMarkingBtn');
+  if(rpMarkingBtn) rpMarkingBtn.addEventListener('click', ()=>openLinkOrWarn(rp.markingSchemeLink, 'marking scheme'));
+}
+
+async function handleSubmitRP(id){
+  const input = document.getElementById('rpAnswerLinkInput');
+  const link = input.value.trim();
+  if(!link || !/^https?:\/\//i.test(link)){
+    input.style.borderColor = 'var(--red)';
+    input.placeholder = 'Paste a valid link starting with https://';
+    return;
+  }
+  const sub = profile.rpSubmissions[id] || {};
+  sub.submitted = true;
+  sub.link = link;
+  sub.status = 'pending';
+  sub.ts = Date.now();
+  profile.rpSubmissions[id] = sub;
+  profile.xp += 150;
+  await saveProfile();
+
+  const rpSubmitBtnEl = document.getElementById('rpSubmitBtn');
+  flashSuccess(rpSubmitBtnEl ? rpSubmitBtnEl.closest('.step-block') : null);
+  coinBurst(150, 'Ranking Paper Submitted 🚀');
+
+  renderRPModal(id);
+  renderDashboard();
+  renderMissionsList();
+}
+
+/* ---------------- LEADERBOARD ---------------- */
+let leaderboardMode = 'marks'; // 'marks' (total marks across graded papers) or 'coins' (lifetime coins earned)
+
+document.getElementById('lbTabMarks').addEventListener('click', ()=>{ leaderboardMode='marks'; renderLeaderboard(); });
+document.getElementById('lbTabCoins').addEventListener('click', ()=>{ leaderboardMode='coins'; renderLeaderboard(); });
+
+async function renderLeaderboard(){
+  document.getElementById('lbTabMarks').className = 'btn btn-sm ' + (leaderboardMode==='marks' ? 'btn-primary' : 'btn-ghost');
+  document.getElementById('lbTabCoins').className = 'btn btn-sm ' + (leaderboardMode==='coins' ? 'btn-primary' : 'btn-ghost');
+
+  const card = document.getElementById('leaderboardCard');
+  card.innerHTML = `<div class="empty-note">Loading leaderboard…</div>`;
+  const students = await listStudents();
+  const entries = students.map(p => ({
+    name: p.name,
+    xp: p.xp,
+    marks: totalMarks(p),
+    gradedPapers: gradedPaperCount(p),
+    completed: completedCount(p),
+    streak: currentStreak(p),
+    rank: rankFor(p.xp).name,
+    photoURL: p.photoURL,
+  }));
+  if(leaderboardMode==='marks'){
+    entries.sort((a,b)=> b.marks - a.marks);
+  } else {
+    entries.sort((a,b)=> b.xp - a.xp);
+  }
+  if(entries.length===0){ card.innerHTML = `<div class="empty-note">No agents yet — be the first to submit a mission!</div>`; return; }
+  const medalClass = i => i===0?'top1':i===1?'top2':i===2?'top3':'';
+  const medalIcon = i => i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+  card.innerHTML = entries.map((e,i)=>{
+    const isMe = profile && e.name.toLowerCase()===profile.name.toLowerCase();
+    const r = RANKS.find(rk=>rk.name===e.rank) || RANKS[0];
+    const metric = leaderboardMode==='marks'
+      ? `<div class="lb-xp">${e.marks} marks</div>`
+      : `<div class="lb-xp">🪙 ${e.xp}</div>`;
+    const subline = leaderboardMode==='marks'
+      ? `${r.icon} ${e.rank} · ${e.gradedPapers} papers graded · 🔥${e.streak}`
+      : `${r.icon} ${e.rank} · ${e.completed} missions · 🔥${e.streak}`;
+    return `<div class="lb-row ${isMe?'me':''}">
+      <div class="lb-rank ${medalClass(i)}">${medalIcon(i)}</div>
+      <div class="avatar-mini" style="background:var(--primary-soft); color:var(--primary);">${avatarInnerHTML(e)}</div>
+      <div>
+        <div class="lb-name">${e.name}${isMe?' (you)':''}</div>
+        <div class="lb-rankname">${subline}</div>
+      </div>
+      ${metric}
+    </div>`;
+  }).join('');
+}
+
+/* ---------------- VIDEO STORE ---------------- */
+function renderStore(){
+  document.getElementById('storeWalletNum').textContent = '🪙 ' + walletBalance(profile);
+  const wrap = document.getElementById('storeWrap');
+  const items = STORE_VIDEOS.length > 0 ? STORE_VIDEOS : [DUMMY_STORE_ITEM];
+  wrap.innerHTML = items.map(v=>{
+    const purchase = profile.purchases[v.id];
+    const owned = !!(purchase && purchase.purchased);
+    const price = v.price || 0;
+    const canAfford = walletBalance(profile) >= price;
+    return `<div class="video-card">
+      <div class="video-thumb">🎬</div>
+      <div class="video-body">
+        ${v.dummy ? `<span class="dummy-tag">Demo — not real</span>` : ''}
+        <h4>${v.title}</h4>
+        <p>${v.description||''}</p>
+        ${owned
+          ? `<button class="btn btn-teal btn-sm" data-open-video="${escapeAttr(v.id)}">▶️ Watch Now</button>`
+          : `<div class="video-price">🪙 ${price}</div><button class="btn ${canAfford?'btn-amber':'btn-ghost'} btn-sm" data-buy-video="${escapeAttr(v.id)}" ${canAfford?'':'disabled'}>${canAfford ? '🛒 Buy with Coins' : 'Not enough coins'}</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('[data-buy-video]').forEach(btn=>{
+    btn.addEventListener('click', ()=>handleBuyVideo(btn.dataset.buyVideo, items));
+  });
+  wrap.querySelectorAll('[data-open-video]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const v = items.find(x=>x.id===btn.dataset.openVideo);
+      openLinkOrWarn(v && v.videoLink, 'lesson video');
+    });
+  });
+}
+
+async function handleBuyVideo(videoId, items){
+  const v = items.find(x=>x.id===videoId);
+  if(!v) return;
+  if(v.dummy){ alert('This is a placeholder demo item — your teacher will add real videos to the store soon.'); return; }
+  const price = v.price || 0;
+  if(walletBalance(profile) < price){ alert("You don't have enough coins for this video yet."); return; }
+  if(!confirm(`Buy "${v.title}" for 🪙${price} coins?`)) return;
+  profile.purchases[videoId] = {purchased:true, price, ts:Date.now()};
+  await saveProfile();
+  renderDashboard();
+  renderStore();
+}
+
+/* ---------------- REWARDS ---------------- */
+function renderRewards(){
+  const c = completedCount(profile);
+  const rewards = getRewardDefs();
+  document.getElementById('rewardsWrap').innerHTML = rewards.map(r=>{
+    const unlocked = c >= r.need;
+    return `<div class="reward-card ${unlocked?'':'locked'}">
+      <div class="lock-ic">${unlocked ? r.icon : '🔒'}</div>
+      <h4>${r.title}</h4>
+      <p>${r.desc}</p>
+      <p class="small-note">${unlocked ? 'Unlocked!' : `Unlocks after ${r.need} missions (you: ${c})`}</p>
+      ${unlocked ? `<button class="btn btn-teal btn-sm" onclick="downloadTextFile('${r.title}.txt','EICT ONLINE\\n${r.title}\\n\\nCongratulations, ${profile.name}! This reward is now unlocked.')">Claim</button>` : ''}
+    </div>`;
+  }).join('');
+}
+function downloadTextFile(filename, content){
+  const blob = new Blob([content], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ---------------- STATS (FOMO) ---------------- */
+async function renderStats(){
+  const wrap = document.getElementById('statsWrap');
+  wrap.innerHTML = `<div class="empty-note">Loading…</div>`;
+  const students = await listStudents();
+  const registered = students.length;
+  const submissionsTotal = students.reduce((s,p)=>s+completedCount(p),0);
+  const activeThisRound = students.filter(p=>completedCount(p)>0).length;
+  const missing = Math.max(0, registered - activeThisRound);
+  wrap.innerHTML = `
+    <div class="stat-box"><div class="v">${registered}</div><div class="l">Agents Registered</div></div>
+    <div class="stat-box"><div class="v">${submissionsTotal}</div><div class="l">Total Submissions</div></div>
+    <div class="stat-box"><div class="v">${activeThisRound}</div><div class="l">Active Agents</div></div>
+    <div class="stat-box"><div class="v">${missing}</div><div class="l">Not Yet Started</div></div>
+  `;
+  const awards = await computeWeeklyAwards();
+  document.getElementById('weeklyAwardsWrap').innerHTML = awards.map(a=>`
+    <div class="award-card">
+      <div class="ic">${a.icon}</div>
+      <div class="t">${a.title}</div>
+      <div class="who">${a.who || '—'}</div>
+      <div class="why">${a.why}</div>
+    </div>`).join('');
+}
+
+async function computeWeeklyAwards(){
+  const students = await listStudents();
+  const entries = students.map(p => ({
+    name: p.name, xp: p.xp, completed: completedCount(p), streak: currentStreak(p),
+  }));
+  if(entries.length===0) return [
+    {icon:'⭐', title:'Highest Coins', who:null, why:'No data yet'},
+    {icon:'🔥', title:'Consistency Award', who:null, why:'No data yet'},
+    {icon:'🛡️', title:'Mission Warrior', who:null, why:'No data yet'},
+  ];
+  const byXp = [...entries].sort((a,b)=>b.xp-a.xp)[0];
+  const byStreak = [...entries].sort((a,b)=>b.streak-a.streak)[0];
+  const byCompleted = [...entries].sort((a,b)=>b.completed-a.completed)[0];
+  return [
+    {icon:'⭐', title:'Highest Coins This Week', who:byXp.name, why:`🪙${byXp.xp} coins earned`},
+    {icon:'🔥', title:'Consistency Award', who:byStreak.name, why:`${byStreak.streak}-mission streak`},
+    {icon:'🛡️', title:'Mission Warrior', who:byCompleted.name, why:`${byCompleted.completed} missions completed`},
+  ];
+}
+
+/* ---------------- HALL OF FAME ---------------- */
+async function renderHallOfFame(){
+  const wrap = document.getElementById('hofWrap');
+  wrap.innerHTML = `<div class="empty-note">Loading…</div>`;
+  const students = await listStudents();
+  const entries = students.map(p => ({
+    name: p.name, xp: p.xp, marks: totalMarks(p), completed: completedCount(p), rank: rankFor(p.xp).name, photoURL: p.photoURL,
+  }));
+  entries.sort((a,b)=>b.marks-a.marks);
+  const finishers = entries.filter(e=>e.completed >= Math.max(MISSIONS.length,1));
+  let html = '';
+  if(entries.length>0){
+    const champ = entries[0];
+    html += `<div class="id-card" style="margin-bottom:18px;">
+      <div class="eyebrow">🏆 ICT Mission Champion</div>
+      <div class="name">${champ.name}</div>
+      <div class="id-stats"><div>Marks<span class="v">${champ.marks}</span></div><div>Missions<span class="v">${champ.completed}/${MISSIONS.length}</span></div><div>Rank<span class="v" style="font-size:13px;">${champ.rank}</span></div></div>
+    </div>`;
+  }
+  html += `<h3 style="margin-bottom:10px;">Top 5 Agents (by Total Marks)</h3>`;
+  if(entries.length===0){
+    html += `<div class="empty-note">No agents yet.</div>`;
+  } else {
+    html += `<table class="simple"><tr><th>#</th><th>Agent</th><th>Rank</th><th>Marks</th><th>Coins</th><th>Missions</th></tr>` +
+      entries.slice(0,5).map((e,i)=>`<tr><td>${i+1}</td><td>${e.name}</td><td>${e.rank}</td><td class="mono">${e.marks}</td><td class="mono">🪙${e.xp}</td><td>${e.completed}/${MISSIONS.length}</td></tr>`).join('') +
+      `</table>`;
+  }
+  html += `<h3 style="margin:22px 0 10px;">🎓 Full Mission Completion</h3>`;
+  html += finishers.length>0
+    ? `<div class="grid grid-3">` + finishers.map(f=>`<div class="award-card"><div class="ic">🎖️</div><div class="t">${f.name}</div><div class="why">${f.marks} marks · ${f.rank}</div></div>`).join('') + `</div>`
+    : `<div class="empty-note">No one has completed every published mission yet — keep going!</div>`;
+  wrap.innerHTML = html;
+}
+</script>
+</body>
+</html>
