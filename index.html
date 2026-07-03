@@ -689,7 +689,8 @@
               <tr><td>Score above 70% (after grading)</td><td class="mono">+50</td></tr>
               <tr><td>Score above 85% (after grading)</td><td class="mono">+100</td></tr>
               <tr><td>Enter correct secret code from discussion video</td><td class="mono">+50</td></tr>
-              <tr><td>Submit a Ranking Paper</td><td class="mono">+150</td></tr>
+              <tr><td>Submit a Ranking Paper</td><td class="mono">+100</td></tr>
+              <tr><td>Submit Ranking Paper before deadline</td><td class="mono">+50</td></tr>
               <tr><td>3 mission streak</td><td class="mono">+100</td></tr>
               <tr><td>5 mission streak</td><td class="mono">+200</td></tr>
             </table>
@@ -1623,6 +1624,8 @@ function renderMissionModal(id){
   const codeVerified = !!sub.codeVerified;
   const hasCode = !!(m.code && String(m.code).trim());
 
+  const usesUploadForm = !!(m.uploadFormLink && String(m.uploadFormLink).trim());
+
   const submitBlock = `
     <div class="step-block ${sub.submitted ? 'unlocked' : ''}">
       <div class="step-head"><span class="dot"></span> Step 1 — Submit Your Answer Sheet</div>
@@ -1631,8 +1634,24 @@ function renderMissionModal(id){
         ${sub.submitted ? `<span class="pill-info">Submitted ✓</span>` : ''}
       </div>
       ${sub.submitted ? `
-        <p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link||'#')}" target="_blank" rel="noopener">${sub.link||''}</a></p>
+        ${sub.link ? `<p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link)}" target="_blank" rel="noopener">${sub.link}</a></p>` : `<p class="small-note">✅ Your file was uploaded privately via Google Form — only your teacher can see it.</p>`}
         <div class="xp-toast-list">${sub.onTime ? `<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag">🪙+50 On-time</span>`:`<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag" style="background:var(--ink-soft);">Late — no on-time bonus</span>`}</div>
+      ` : usesUploadForm ? `
+        <p class="small-note" style="margin-top:10px;">Your answer sheet stays private — only your teacher can see it. No other student can view it.</p>
+        <div class="file-input-wrap" style="margin-top:6px;">
+          <button class="btn btn-primary btn-sm" id="openUploadFormBtn">📤 Upload Answer Sheet (PDF / Image / RAR)</button>
+        </div>
+        <p class="small-note" style="margin-top:10px;"><strong>Important:</strong> on the form, type your name exactly as you use it here: <strong>${escapeHtml(profile.name)}</strong> — this is how your teacher matches your file to you.</p>
+        <label class="check-row" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="confirmUploadCheck">
+          <span class="small-note" style="margin:0;">I've uploaded my file on the form above</span>
+        </label>
+        <div class="file-input-wrap" style="margin-top:10px;">
+          <button class="btn btn-primary btn-sm" id="confirmUploadBtn" disabled>✅ Confirm Submission</button>
+        </div>
+        <p class="small-note">${m.dueAt
+          ? `Confirming earns 🪙+100 coins, plus 🪙+50 if you upload before <strong>${new Date(m.dueAt).toLocaleString(undefined,{dateStyle:'medium', timeStyle:'short'})}</strong>. This also unlocks the next mission right away — your teacher will grade it separately.`
+          : `Confirming earns 🪙+100 coins, plus 🪙+50 since it's before the ${m.deadline||'deadline'}. This also unlocks the next mission right away — your teacher will grade it separately.`}</p>
       ` : `
         <label class="field-label" style="margin-top:10px;">Paste your Google Drive answer sheet link</label>
         <div class="link-row">
@@ -1695,6 +1714,16 @@ function renderMissionModal(id){
   const submitBtn = document.getElementById('submitBtn');
   if(submitBtn) submitBtn.addEventListener('click', ()=>handleSubmitMission(id));
 
+  const openUploadFormBtn = document.getElementById('openUploadFormBtn');
+  if(openUploadFormBtn) openUploadFormBtn.addEventListener('click', ()=>openLinkOrWarn(m.uploadFormLink, 'upload form'));
+
+  const confirmUploadCheck = document.getElementById('confirmUploadCheck');
+  const confirmUploadBtn = document.getElementById('confirmUploadBtn');
+  if(confirmUploadCheck && confirmUploadBtn){
+    confirmUploadCheck.addEventListener('change', ()=>{ confirmUploadBtn.disabled = !confirmUploadCheck.checked; });
+    confirmUploadBtn.addEventListener('click', ()=>handleSubmitMission(id, {viaForm:true}));
+  }
+
   const watchVideoBtn = document.getElementById('watchVideoBtn');
   if(watchVideoBtn) watchVideoBtn.addEventListener('click', ()=>openLinkOrWarn(m.videoLink, 'discussion video'));
 
@@ -1708,18 +1737,22 @@ function renderMissionModal(id){
   if(codeBtn) codeBtn.addEventListener('click', ()=>handleCode(id, m));
 }
 
-async function handleSubmitMission(id){
-  const input = document.getElementById('answerLinkInput');
-  const link = input.value.trim();
-  if(!link || !/^https?:\/\//i.test(link)){
-    input.style.borderColor = 'var(--red)';
-    input.placeholder = 'Paste a valid link starting with https://';
-    return;
+async function handleSubmitMission(id, opts){
+  const viaForm = !!(opts && opts.viaForm);
+  let link = '';
+  if(!viaForm){
+    const input = document.getElementById('answerLinkInput');
+    link = input.value.trim();
+    if(!link || !/^https?:\/\//i.test(link)){
+      input.style.borderColor = 'var(--red)';
+      input.placeholder = 'Paste a valid link starting with https://';
+      return;
+    }
   }
   const m = MISSIONS.find(x=>x.id===id);
   const sub = profile.submissions[id] || {};
   sub.submitted = true;
-  sub.link = link;
+  if(link) sub.link = link; // form-based submissions intentionally store no link, so no one else can see it
   // If the teacher set an exact deadline (dueAt), only award the on-time bonus
   // when the submission happens at or before that moment. No dueAt set = always on-time,
   // matching how missions behaved before deadlines were tracked precisely.
@@ -1738,7 +1771,7 @@ async function handleSubmitMission(id){
   const streakGain = await maybeStreakBonus();
   await saveProfile();
 
-  const submitBtnEl = document.getElementById('submitBtn');
+  const submitBtnEl = document.getElementById('submitBtn') || document.getElementById('confirmUploadBtn');
   flashSuccess(submitBtnEl ? submitBtnEl.closest('.step-block') : null);
   coinBurst(gained, sub.onTime ? 'Mission Submitted 🚀' : 'Mission Submitted (Late) 🚀');
   if(streakGain) setTimeout(()=>coinBurst(streakGain, 'Streak Bonus 🔥'), 700);
@@ -1785,6 +1818,8 @@ function renderRPModal(id){
   document.getElementById('modalTitle').textContent = rp.title;
   document.getElementById('modalTopic').textContent = rp.topic || 'Covers everything up to this point';
 
+  const rpUsesUploadForm = !!(rp.uploadFormLink && String(rp.uploadFormLink).trim());
+
   const submitBlock = `
     <div class="step-block ${sub.submitted ? 'unlocked' : ''}">
       <div class="step-head"><span class="dot"></span> Step 1 — Submit Your Answer Sheet</div>
@@ -1793,15 +1828,33 @@ function renderRPModal(id){
         ${sub.submitted ? `<span class="pill-info">Submitted ✓</span>` : ''}
       </div>
       ${sub.submitted ? `
-        <p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link||'#')}" target="_blank" rel="noopener">${sub.link||''}</a></p>
-        <div class="xp-toast-list"><span class="xp-tag">🪙+150 Submit</span></div>
+        ${sub.link ? `<p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link)}" target="_blank" rel="noopener">${sub.link}</a></p>` : `<p class="small-note">✅ Your file was uploaded privately via Google Form — only your teacher can see it.</p>`}
+        <div class="xp-toast-list">${sub.onTime!==false ? `<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag">🪙+50 On-time</span>`:`<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag" style="background:var(--ink-soft);">Late — no on-time bonus</span>`}</div>
+      ` : rpUsesUploadForm ? `
+        <p class="small-note" style="margin-top:10px;">Your answer sheet stays private — only your teacher can see it. No other student can view it.</p>
+        <div class="file-input-wrap" style="margin-top:6px;">
+          <button class="btn btn-purple btn-sm" id="openRPUploadFormBtn">📤 Upload Answer Sheet (PDF / Image / RAR)</button>
+        </div>
+        <p class="small-note" style="margin-top:10px;"><strong>Important:</strong> on the form, type your name exactly as you use it here: <strong>${escapeHtml(profile.name)}</strong> — this is how your teacher matches your file to you.</p>
+        <label class="check-row" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="rpConfirmUploadCheck">
+          <span class="small-note" style="margin:0;">I've uploaded my file on the form above</span>
+        </label>
+        <div class="file-input-wrap" style="margin-top:10px;">
+          <button class="btn btn-purple btn-sm" id="rpConfirmUploadBtn" disabled>✅ Confirm Submission</button>
+        </div>
+        <p class="small-note">${rp.dueAt
+          ? `Confirming earns 🪙+100 coins, plus 🪙+50 if you upload before <strong>${new Date(rp.dueAt).toLocaleString(undefined,{dateStyle:'medium', timeStyle:'short'})}</strong>. Ranking papers don't block your mission progress.`
+          : `Confirming earns 🪙+100 coins, plus 🪙+50 since it's before the ${rp.deadline||'deadline'}. Ranking papers don't block your mission progress.`}</p>
       ` : `
         <label class="field-label" style="margin-top:10px;">Paste your Google Drive answer sheet link</label>
         <div class="link-row">
           <input type="text" id="rpAnswerLinkInput" placeholder="https://drive.google.com/file/d/.../view">
           <button class="btn btn-purple btn-sm" id="rpSubmitBtn">Submit</button>
         </div>
-        <p class="small-note">Submitting earns 🪙+150 coins. Ranking papers don't block your mission progress.</p>
+        <p class="small-note">${rp.dueAt
+          ? `Submitting earns 🪙+100 coins, plus 🪙+50 if you submit before <strong>${new Date(rp.dueAt).toLocaleString(undefined,{dateStyle:'medium', timeStyle:'short'})}</strong>. Ranking papers don't block your mission progress.`
+          : `Submitting earns 🪙+100 coins, plus 🪙+50 since it's before the ${rp.deadline||'deadline'}. Ranking papers don't block your mission progress.`}</p>
       `}
     </div>`;
 
@@ -1827,30 +1880,51 @@ function renderRPModal(id){
   document.getElementById('openRPPaperBtn').addEventListener('click', ()=>openLinkOrWarn(rp.paperLink, 'paper'));
   const rpSubmitBtn = document.getElementById('rpSubmitBtn');
   if(rpSubmitBtn) rpSubmitBtn.addEventListener('click', ()=>handleSubmitRP(id));
+  const openRPUploadFormBtn = document.getElementById('openRPUploadFormBtn');
+  if(openRPUploadFormBtn) openRPUploadFormBtn.addEventListener('click', ()=>openLinkOrWarn(rp.uploadFormLink, 'upload form'));
+  const rpConfirmUploadCheck = document.getElementById('rpConfirmUploadCheck');
+  const rpConfirmUploadBtn = document.getElementById('rpConfirmUploadBtn');
+  if(rpConfirmUploadCheck && rpConfirmUploadBtn){
+    rpConfirmUploadCheck.addEventListener('change', ()=>{ rpConfirmUploadBtn.disabled = !rpConfirmUploadCheck.checked; });
+    rpConfirmUploadBtn.addEventListener('click', ()=>handleSubmitRP(id, {viaForm:true}));
+  }
   const rpMarkingBtn = document.getElementById('rpMarkingBtn');
   if(rpMarkingBtn) rpMarkingBtn.addEventListener('click', ()=>openLinkOrWarn(rp.markingSchemeLink, 'marking scheme'));
 }
 
-async function handleSubmitRP(id){
-  const input = document.getElementById('rpAnswerLinkInput');
-  const link = input.value.trim();
-  if(!link || !/^https?:\/\//i.test(link)){
-    input.style.borderColor = 'var(--red)';
-    input.placeholder = 'Paste a valid link starting with https://';
-    return;
+async function handleSubmitRP(id, opts){
+  const viaForm = !!(opts && opts.viaForm);
+  let link = '';
+  if(!viaForm){
+    const input = document.getElementById('rpAnswerLinkInput');
+    link = input.value.trim();
+    if(!link || !/^https?:\/\//i.test(link)){
+      input.style.borderColor = 'var(--red)';
+      input.placeholder = 'Paste a valid link starting with https://';
+      return;
+    }
   }
+  const rp = RANKING_PAPERS.find(x=>x.id===id);
   const sub = profile.rpSubmissions[id] || {};
   sub.submitted = true;
-  sub.link = link;
+  if(link) sub.link = link; // form-based submissions intentionally store no link, so no one else can see it
+  let onTime = true;
+  if(rp && rp.dueAt){
+    const dueTs = new Date(rp.dueAt).getTime();
+    if(!isNaN(dueTs)) onTime = Date.now() <= dueTs;
+  }
+  sub.onTime = onTime;
   sub.status = 'pending';
   sub.ts = Date.now();
   profile.rpSubmissions[id] = sub;
-  profile.xp += 150;
+  let gained = 100;
+  profile.xp += 100;
+  if(sub.onTime){ profile.xp += 50; gained += 50; }
   await saveProfile();
 
-  const rpSubmitBtnEl = document.getElementById('rpSubmitBtn');
+  const rpSubmitBtnEl = document.getElementById('rpSubmitBtn') || document.getElementById('rpConfirmUploadBtn');
   flashSuccess(rpSubmitBtnEl ? rpSubmitBtnEl.closest('.step-block') : null);
-  coinBurst(150, 'Ranking Paper Submitted 🚀');
+  coinBurst(gained, sub.onTime ? 'Ranking Paper Submitted 🚀' : 'Ranking Paper Submitted (Late) 🚀');
 
   renderRPModal(id);
   renderDashboard();
