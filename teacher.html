@@ -409,7 +409,8 @@ const SCHEMAS = {
     {key:'order', label:'Order (sequence number)', type:'number', required:true, placeholder:'1'},
     {key:'title', label:'Title', type:'text', required:true, placeholder:'Mission 01 — Networking Fundamentals'},
     {key:'topic', label:'Topic', type:'text', placeholder:'OSI model, topologies, transmission media'},
-    {key:'deadline', label:'Deadline (informational text)', type:'text', placeholder:'Day 5'},
+    {key:'deadline', label:'Deadline (informational text shown to students)', type:'text', placeholder:'Day 5'},
+    {key:'dueAt', label:'Exact deadline date & time (used to decide the on-time bonus)', type:'datetime-local'},
     {key:'paperLink', label:'Paper — Google Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'videoLink', label:'Discussion video link', type:'text', placeholder:'https://drive.google.com/... or YouTube link'},
     {key:'markingSchemeLink', label:'Marking scheme — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
@@ -696,6 +697,13 @@ function renderOverview(){
 }
 
 /* ---------------- MISSIONS TABLE ---------------- */
+function formatDueAt(dueAt){
+  if(!dueAt) return '<span style="color:var(--ink-soft);">No cutoff set — always on-time</span>';
+  const d = new Date(dueAt);
+  if(isNaN(d.getTime())) return '—';
+  return d.toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'});
+}
+
 function renderMissionsTable(){
   const el = document.getElementById('missionsTable');
   if(MISSIONS.length===0){
@@ -703,12 +711,13 @@ function renderMissionsTable(){
     el.parentElement.innerHTML = `<div class="empty-note">No missions yet. Click "+ Add Mission" above to publish your first one.</div>`;
     return;
   }
-  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Topic</th><th>Deadline</th><th>Status</th><th></th></tr>` +
+  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Topic</th><th>Deadline</th><th>On-time cutoff</th><th>Status</th><th></th></tr>` +
     MISSIONS.map(m=>`<tr>
       <td class="mono">${m.order ?? '—'}</td>
       <td><b>${escapeHtml(m.title)}</b></td>
       <td>${escapeHtml(m.topic||'—')}</td>
       <td>${escapeHtml(m.deadline||'—')}</td>
+      <td style="font-size:12.5px;">${formatDueAt(m.dueAt)}</td>
       <td><span class="pill ${m.active!==false?'pill-live':'pill-draft'}">${m.active!==false?'Published':'Draft'}</span></td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" data-edit-mission="${m.id}">Edit</button>
@@ -833,6 +842,11 @@ function openItemForm(collectionName, existingItem){
     if(f.type==='number'){
       return `<label class="field-label">${f.label}${f.required?' *':''}</label>
         <input type="number" id="field_${f.key}" placeholder="${escapeAttr(f.placeholder||'')}" value="${val!==undefined && val!==null ? val : ''}">`;
+    }
+    if(f.type==='datetime-local'){
+      return `<label class="field-label">${f.label}${f.required?' *':''}</label>
+        <input type="datetime-local" id="field_${f.key}" value="${escapeAttr(val||'')}">
+        <p class="small-note" style="margin-top:4px;">Leave blank to always award the on-time bonus for this item, regardless of when it's submitted.</p>`;
     }
     return `<label class="field-label">${f.label}${f.required?' *':''}</label>
       <input type="text" id="field_${f.key}" placeholder="${escapeAttr(f.placeholder||'')}" value="${escapeAttr(val||'')}">`;
