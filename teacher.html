@@ -196,6 +196,14 @@
 
   ::-webkit-scrollbar{height:8px; width:8px;}
   ::-webkit-scrollbar-thumb{background:#cbd8dc; border-radius:8px;}
+
+  /* ---------- PRINT: only show the access-code list ---------- */
+  @media print{
+    body *{ visibility:hidden; }
+    #bulkResultsCard, #bulkResultsCard *{ visibility:visible; }
+    #bulkResultsCard{ position:absolute; top:0; left:0; width:100%; max-width:none; box-shadow:none; }
+    #bulkResultsCard .modal-foot{ display:none; }
+  }
 </style>
 </head>
 <body>
@@ -335,6 +343,7 @@
           </div>
           <div style="display:flex; gap:8px;">
             <button class="btn btn-primary btn-sm" id="addStudentBtn">+ Add Student</button>
+            <button class="btn btn-ghost btn-sm" id="bulkAddBtn">📋 Bulk Add</button>
             <button class="btn btn-ghost btn-sm" id="refreshStudentsBtn">↻ Refresh</button>
           </div>
         </div>
@@ -371,6 +380,45 @@
     <div class="modal-body" id="purchasesModalBody"></div>
     <div class="modal-foot">
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('purchasesModal').classList.remove('show')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= BULK ADD STUDENTS MODAL ================= -->
+<div class="modal-overlay" id="bulkAddModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Bulk Add Students</h3>
+      <button class="modal-close" id="bulkAddCloseBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label">Paste one student name per line</label>
+      <textarea id="bulkAddTextarea" rows="10" placeholder="Nimal Perera
+Kamala Silva
+Ashan Fernando"></textarea>
+      <p class="small-note" style="margin-top:8px;">Blank lines are ignored. Names already registered will be skipped automatically — existing codes won't be changed.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" id="bulkAddCancelBtn">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="bulkAddSubmitBtn">Add Students</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= BULK ADD RESULTS MODAL (printable) ================= -->
+<div class="modal-overlay" id="bulkResultsModal">
+  <div class="modal" id="bulkResultsCard">
+    <div class="modal-head">
+      <h3>Student Access Codes</h3>
+      <button class="modal-close" id="bulkResultsCloseBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="small-note" id="bulkResultsSummary" style="margin-bottom:10px;"></p>
+      <div class="table-wrap"><table class="data" id="bulkResultsTable"></table></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" id="bulkResultsCloseBtn2">Close</button>
+      <button class="btn btn-primary btn-sm" id="bulkResultsPrintBtn">🖨️ Print This List</button>
     </div>
   </div>
 </div>
@@ -413,6 +461,8 @@ const SCHEMAS = {
     {key:'dueAt', label:'Exact deadline date & time (used to decide the on-time bonus)', type:'datetime-local'},
     {key:'paperLink', label:'Paper — Google Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'videoLink', label:'Discussion video link', type:'text', placeholder:'https://drive.google.com/... or YouTube link'},
+    {key:'uploadFormLink', label:'Answer sheet upload — Google Form link (students submit their file here, privately)', type:'text', placeholder:'https://forms.gle/...'},
+    {key:'formResponsesLink', label:'Google Form "Responses" folder link (for you — jump straight to uploaded files while grading)', type:'text', placeholder:'https://drive.google.com/drive/folders/...'},
     {key:'markingSchemeLink', label:'Marking scheme — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'markedAnswerSheetLink', label:'Marked answer sheet — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'code', label:'Mission code (revealed after video, unlocks next mission bonus)', type:'text', placeholder:'NETWORK24'},
@@ -431,8 +481,11 @@ const SCHEMAS = {
     {key:'title', label:'Title', type:'text', required:true, placeholder:'Ranking Paper 1'},
     {key:'topic', label:'Topic / coverage note', type:'text', placeholder:'Covers Missions 1–2'},
     {key:'afterMissionId', label:'Appears after mission', type:'select', optionsSource:'missions', required:true},
-    {key:'deadline', label:'Deadline (informational text)', type:'text', placeholder:'Day 10'},
+    {key:'deadline', label:'Deadline (informational text shown to students)', type:'text', placeholder:'Day 10'},
+    {key:'dueAt', label:'Exact deadline date & time (used to decide the on-time bonus)', type:'datetime-local'},
     {key:'paperLink', label:'Paper — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
+    {key:'uploadFormLink', label:'Answer sheet upload — Google Form link (students submit their file here, privately)', type:'text', placeholder:'https://forms.gle/...'},
+    {key:'formResponsesLink', label:'Google Form "Responses" folder link (for you — jump straight to uploaded files while grading)', type:'text', placeholder:'https://drive.google.com/drive/folders/...'},
     {key:'markingSchemeLink', label:'Marking scheme — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'active', label:'Published (visible to students)', type:'checkbox', default:true},
   ],
@@ -637,13 +690,14 @@ function buildGradingQueue(){
   STUDENTS.forEach(s=>{
     Object.entries(s.submissions||{}).forEach(([missionId,sub])=>{
       if(sub.submitted && sub.status==='pending'){
-        queue.push({studentKey:s._key, studentName:s.name, kind:'mission', itemId:missionId, itemTitle:missionTitleById(missionId), link:sub.link, ts:sub.ts||0});
+        const m = MISSIONS.find(x=>x.id===missionId);
+        queue.push({studentKey:s._key, studentName:s.name, kind:'mission', itemId:missionId, itemTitle:missionTitleById(missionId), link:sub.link, formResponsesLink:m&&m.formResponsesLink, uploadFormLink:m&&m.uploadFormLink, ts:sub.ts||0});
       }
     });
     Object.entries(s.rpSubmissions||{}).forEach(([rpId,sub])=>{
       if(sub.submitted && sub.status==='pending'){
         const rp = RANKING_PAPERS.find(x=>x.id===rpId);
-        queue.push({studentKey:s._key, studentName:s.name, kind:'rp', itemId:rpId, itemTitle: rp ? rp.title : '(deleted ranking paper)', link:sub.link, ts:sub.ts||0});
+        queue.push({studentKey:s._key, studentName:s.name, kind:'rp', itemId:rpId, itemTitle: rp ? rp.title : '(deleted ranking paper)', link:sub.link, formResponsesLink:rp&&rp.formResponsesLink, uploadFormLink:rp&&rp.uploadFormLink, ts:sub.ts||0});
       }
     });
   });
@@ -767,12 +821,13 @@ function renderRPTable(){
     el.parentElement.innerHTML = `<div class="empty-note">No ranking papers yet. Click "+ Add Ranking Paper" above.</div>`;
     return;
   }
-  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Appears After</th><th>Deadline</th><th>Status</th><th></th></tr>` +
+  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Appears After</th><th>Deadline</th><th>On-time cutoff</th><th>Status</th><th></th></tr>` +
     RANKING_PAPERS.map(p=>`<tr>
       <td class="mono">${p.order ?? '—'}</td>
       <td><b>${escapeHtml(p.title)}</b></td>
       <td>${escapeHtml(missionTitleById(p.afterMissionId))}</td>
       <td>${escapeHtml(p.deadline||'—')}</td>
+      <td style="font-size:12.5px;">${formatDueAt(p.dueAt)}</td>
       <td><span class="pill ${p.active!==false?'pill-live':'pill-draft'}">${p.active!==false?'Published':'Draft'}</span></td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" data-edit-rp="${p.id}">Edit</button>
@@ -944,13 +999,21 @@ function renderGrading(){
   }
   wrap.innerHTML = queue.map(q=>{
     const uid = `${q.studentKey}__${q.kind}__${q.itemId}`;
+    const openBtn = q.link
+      ? `<a href="${escapeAttr(q.link)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Open Submission</a>`
+      : (q.formResponsesLink
+          ? `<a href="${escapeAttr(q.formResponsesLink)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📂 Open Responses Folder</a>`
+          : (q.uploadFormLink
+              ? `<a href="${escapeAttr(q.uploadFormLink)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📤 Open Upload Form</a>`
+              : `<span class="small-note">No submission link on file</span>`));
     return `<div class="queue-card">
       <div class="qhead">
         <div>
           <div class="qstudent">${escapeHtml(q.studentName)}</div>
           <div class="qitem">${q.kind==='rp' ? '🏅 Ranking Paper: ' : '🗂️ '}${escapeHtml(q.itemTitle)}</div>
+          ${!q.link && (q.formResponsesLink||q.uploadFormLink) ? `<div class="small-note" style="margin-top:2px;">Submitted via Google Form — look for <strong>${escapeHtml(q.studentName)}</strong>'s file in the responses.</div>` : ''}
         </div>
-        <a href="${escapeAttr(q.link)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Open Submission</a>
+        ${openBtn}
       </div>
       <div class="qform">
         <input type="number" min="0" max="100" placeholder="Score %" id="score_${uid}">
@@ -1133,6 +1196,71 @@ async function regenerateCode(studentKey){
     alert('Could not generate a code — please try again.');
   }
 }
+
+/* ---------------- BULK ADD STUDENTS ---------------- */
+document.getElementById('bulkAddBtn').addEventListener('click', ()=>{
+  document.getElementById('bulkAddTextarea').value = '';
+  document.getElementById('bulkAddModal').classList.add('show');
+});
+document.getElementById('bulkAddCloseBtn').addEventListener('click', ()=>document.getElementById('bulkAddModal').classList.remove('show'));
+document.getElementById('bulkAddCancelBtn').addEventListener('click', ()=>document.getElementById('bulkAddModal').classList.remove('show'));
+document.getElementById('bulkAddModal').addEventListener('click', (e)=>{ if(e.target.id==='bulkAddModal') document.getElementById('bulkAddModal').classList.remove('show'); });
+
+document.getElementById('bulkAddSubmitBtn').addEventListener('click', async ()=>{
+  const raw = document.getElementById('bulkAddTextarea').value;
+  const names = [...new Set(raw.split('\n').map(l=>l.trim()).filter(Boolean))];
+  if(names.length===0){ alert('Paste at least one name first.'); return; }
+
+  const btn = document.getElementById('bulkAddSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+
+  const added = [];
+  const skipped = [];
+  for(const name of names){
+    const key = name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+    if(!key){ skipped.push({name, reason:'No usable letters/numbers'}); continue; }
+    const already = STUDENTS.find(s=>s._key===key) || added.find(a=>a.key===key);
+    if(already){ skipped.push({name, reason:'Already registered'}); continue; }
+
+    const doc = defaultStudentDoc(name);
+    try{
+      await db.collection('students').doc(key).set(doc);
+      STUDENTS.push({_key:key, ...doc});
+      added.push({key, name, accessCode:doc.accessCode});
+    }catch(e){
+      console.error(e);
+      skipped.push({name, reason:'Save failed — try again individually'});
+    }
+  }
+
+  btn.disabled = false; btn.textContent = 'Add Students';
+  document.getElementById('bulkAddModal').classList.remove('show');
+  renderStudents();
+  renderOverview();
+  showBulkResults(added, skipped);
+});
+
+function showBulkResults(added, skipped){
+  const summary = document.getElementById('bulkResultsSummary');
+  const table = document.getElementById('bulkResultsTable');
+  summary.textContent = `${added.length} student${added.length===1?'':'s'} added` + (skipped.length ? `, ${skipped.length} skipped.` : '.');
+
+  if(added.length===0){
+    table.innerHTML = '';
+  } else {
+    table.innerHTML = `<tr><th>#</th><th>Name</th><th>Access Code</th></tr>` +
+      added.map((a,i)=>`<tr><td class="mono">${i+1}</td><td>${escapeHtml(a.name)}</td><td class="mono" style="font-weight:700; letter-spacing:0.05em;">${escapeHtml(a.accessCode)}</td></tr>`).join('');
+  }
+  if(skipped.length){
+    table.innerHTML += `<tr><td colspan="3" style="padding-top:14px; font-weight:700; color:var(--ink-soft);">Skipped</td></tr>` +
+      skipped.map(s=>`<tr><td></td><td>${escapeHtml(s.name)}</td><td style="color:var(--ink-soft);">${escapeHtml(s.reason)}</td></tr>`).join('');
+  }
+  document.getElementById('bulkResultsModal').classList.add('show');
+}
+document.getElementById('bulkResultsCloseBtn').addEventListener('click', ()=>document.getElementById('bulkResultsModal').classList.remove('show'));
+document.getElementById('bulkResultsCloseBtn2').addEventListener('click', ()=>document.getElementById('bulkResultsModal').classList.remove('show'));
+document.getElementById('bulkResultsModal').addEventListener('click', (e)=>{ if(e.target.id==='bulkResultsModal') document.getElementById('bulkResultsModal').classList.remove('show'); });
+document.getElementById('bulkResultsPrintBtn').addEventListener('click', ()=>window.print());
 
 /* ---------------- PURCHASE LOG ---------------- */
 function openPurchasesModal(studentKey){
