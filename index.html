@@ -333,6 +333,17 @@
   ::-webkit-scrollbar{height:8px; width:8px;}
   ::-webkit-scrollbar-thumb{background:#cbd8dc; border-radius:8px;}
 
+  .quote-banner{
+    background:linear-gradient(120deg, var(--primary), var(--teal));
+    color:#fff; border-radius:14px; padding:14px 20px; margin-bottom:18px;
+    box-shadow:0 6px 18px rgba(30,78,140,0.22);
+    display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+    animation: quoteFadeIn .4s ease;
+  }
+  @keyframes quoteFadeIn{ from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:none;} }
+  .quote-banner .quote-main{ font-family:'Space Grotesk'; font-weight:700; font-size:16px; }
+  .quote-banner .quote-sub{ font-size:12.5px; opacity:0.85; font-style:italic; }
+
   /* ---------- FX: BOOT OVERLAY (game-style intro, plays once on dashboard entry) ---------- */
   #bootOverlay{
     position:fixed; inset:0; z-index:9999;
@@ -611,6 +622,11 @@
 
     <main class="main">
 
+      <div class="quote-banner" id="quoteBanner">
+        <div class="quote-main" id="quoteMainText">කැපවීම = ප්‍රතිඵලය</div>
+        <div class="quote-sub" id="quoteSubText">Dedication = Results</div>
+      </div>
+
       <!-- ---------- DASHBOARD ---------- -->
       <section class="view active" id="view-dashboard">
         <div class="topbar">
@@ -674,6 +690,12 @@
         <div class="card" style="margin-bottom:18px;">
           <h3><span class="ic">🗺️</span> Mission Chain</h3>
           <div class="chain" id="dashChain"></div>
+        </div>
+
+        <div class="card" style="margin-bottom:18px;">
+          <h3><span class="ic">📈</span> Your Skill Progress</h3>
+          <p style="font-size:13px; color:var(--ink-soft); margin:0 0 10px;">Your graded scores, in order — this is your paper-writing skill improving over the 50 days.</p>
+          <div id="progressChartWrap"></div>
         </div>
 
         <div class="grid grid-2">
@@ -957,7 +979,9 @@ async function loadCollection(name){
     // everything and sorting client-side guarantees every published
     // mission/plan/paper always appears, order field or not.
     const snap = await db.collection(name).get();
-    const docs = snap.docs.map(d=>({id:d.id, ...d.data()})).filter(x=>x.active!==false);
+    const docs = snap.docs.map(d=>({id:d.id, ...d.data()}))
+      .filter(x=>x.active!==false)
+      .filter(x=>!(Array.isArray(x.hiddenFor) && profile && x.hiddenFor.includes(profile._key)));
     docs.sort((a,b)=>{
       const oa = (typeof a.order === 'number') ? a.order : 999999;
       const ob = (typeof b.order === 'number') ? b.order : 999999;
@@ -1279,7 +1303,32 @@ document.getElementById('navlist').addEventListener('click', (e)=>{
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+currentView).classList.add('active');
   renderView(currentView);
+  rotateQuote();
 });
+
+/* ---------------- MOTIVATIONAL QUOTES ---------------- */
+const MOTIVATION_QUOTES = [
+  {main:'කැපවීම = ප්‍රතිඵලය', sub:'Dedication = Results'},
+  {main:'Consistency beats intensity — show up daily, even for 20 minutes.', sub:'Small reps, done often, win the long game.'},
+  {main:'Every mission you finish trains your brain like a muscle.', sub:'A-Level ready. Life ready.'},
+  {main:'Your streak isn\u2019t just a number.', sub:'It\u2019s proof you finish what you start.'},
+  {main:'Debugging today\u2019s mistakes builds tomorrow\u2019s resilience.', sub:'Every error is a lesson, not a setback.'},
+  {main:'Progress, not perfection.', sub:'Every submitted mission is a rep in the gym for your mind.'},
+  {main:'The skills you master here are the edge you carry into every future career.', sub:'ICT today. Opportunity tomorrow.'},
+  {main:'Small steps, repeated daily, beat big leaps taken rarely.', sub:'Keep the chain going.'},
+];
+function rotateQuote(){
+  const q = MOTIVATION_QUOTES[Math.floor(Math.random()*MOTIVATION_QUOTES.length)];
+  const mainEl = document.getElementById('quoteMainText');
+  const subEl = document.getElementById('quoteSubText');
+  if(!mainEl || !subEl) return;
+  const banner = document.getElementById('quoteBanner');
+  banner.style.animation = 'none';
+  void banner.offsetWidth;
+  banner.style.animation = '';
+  mainEl.textContent = q.main;
+  subEl.textContent = q.sub;
+}
 
 /* ---------------- render orchestration ---------------- */
 function renderAll(){
@@ -1369,6 +1418,62 @@ function renderDashboard(){
       wrap.innerHTML = mine.map(a=>`<div style="display:flex; gap:10px; align-items:center; background:var(--surface-soft); padding:10px 12px; border-radius:10px;"><span style="font-size:18px;">${a.icon}</span><div><div style="font-weight:700; font-size:13px;">${a.title}</div><div style="font-size:11px; color:var(--ink-soft);">${a.why}</div></div></div>`).join('');
     }
   });
+
+  renderProgressChart();
+}
+
+function renderProgressChart(){
+  const wrap = document.getElementById('progressChartWrap');
+  const points = [];
+  MISSIONS.forEach((m,i)=>{
+    const sub = profile.submissions[m.id];
+    if(sub && sub.status==='graded' && typeof sub.score==='number'){
+      points.push({label:`M${i+1}`, score:sub.score});
+    }
+  });
+
+  if(points.length < 2){
+    wrap.innerHTML = `<div class="empty-note">Once your teacher grades at least 2 missions, your progress chart appears here.</div>`;
+    return;
+  }
+
+  const w = 560, h = 180, padL = 34, padR = 16, padT = 16, padB = 26;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const xStep = points.length>1 ? plotW/(points.length-1) : 0;
+  const yFor = score => padT + plotH - (Math.max(0,Math.min(100,score))/100)*plotH;
+  const xFor = i => padL + i*xStep;
+
+  const linePoints = points.map((p,i)=>`${xFor(i)},${yFor(p.score)}`).join(' ');
+  const gridLines = [0,25,50,75,100].map(v=>{
+    const y = yFor(v);
+    return `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>
+            <text x="${padL-8}" y="${y+3}" font-size="9" fill="var(--ink-soft)" text-anchor="end">${v}</text>`;
+  }).join('');
+  const dots = points.map((p,i)=>`
+    <circle cx="${xFor(i)}" cy="${yFor(p.score)}" r="4" fill="var(--teal)" stroke="#fff" stroke-width="1.5">
+      <title>${p.label}: ${p.score}%</title>
+    </circle>
+    <text x="${xFor(i)}" y="${h-6}" font-size="9" fill="var(--ink-soft)" text-anchor="middle">${p.label}</text>
+  `).join('');
+
+  const firstHalf = points.slice(0, Math.ceil(points.length/2));
+  const secondHalf = points.slice(Math.ceil(points.length/2));
+  const avg = arr => arr.reduce((s,p)=>s+p.score,0)/arr.length;
+  const firstAvg = avg(firstHalf), secondAvg = avg(secondHalf.length?secondHalf:firstHalf);
+  const diff = secondAvg - firstAvg;
+  let trendLabel, trendColor;
+  if(diff > 4){ trendLabel = `📈 Improving — up ${diff.toFixed(0)} points on average`; trendColor = 'var(--green)'; }
+  else if(diff < -4){ trendLabel = `📉 Dipped ${Math.abs(diff).toFixed(0)} points recently — worth a closer look`; trendColor = 'var(--red)'; }
+  else { trendLabel = `➖ Holding steady around ${secondAvg.toFixed(0)}%`; trendColor = 'var(--ink-soft)'; }
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto;">
+      ${gridLines}
+      <polyline points="${linePoints}" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+    </svg>
+    <div style="margin-top:8px; font-size:13px; font-weight:700; color:${trendColor};">${trendLabel}</div>
+  `;
 }
 
 function renderProfilePicCard(){
@@ -1624,8 +1729,6 @@ function renderMissionModal(id){
   const codeVerified = !!sub.codeVerified;
   const hasCode = !!(m.code && String(m.code).trim());
 
-  const usesUploadForm = !!(m.uploadFormLink && String(m.uploadFormLink).trim());
-
   const submitBlock = `
     <div class="step-block ${sub.submitted ? 'unlocked' : ''}">
       <div class="step-head"><span class="dot"></span> Step 1 — Submit Your Answer Sheet</div>
@@ -1634,24 +1737,8 @@ function renderMissionModal(id){
         ${sub.submitted ? `<span class="pill-info">Submitted ✓</span>` : ''}
       </div>
       ${sub.submitted ? `
-        ${sub.link ? `<p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link)}" target="_blank" rel="noopener">${sub.link}</a></p>` : `<p class="small-note">✅ Your file was uploaded privately via Google Form — only your teacher can see it.</p>`}
+        <p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link||'#')}" target="_blank" rel="noopener">${sub.link||''}</a></p>
         <div class="xp-toast-list">${sub.onTime ? `<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag">🪙+50 On-time</span>`:`<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag" style="background:var(--ink-soft);">Late — no on-time bonus</span>`}</div>
-      ` : usesUploadForm ? `
-        <p class="small-note" style="margin-top:10px;">Your answer sheet stays private — only your teacher can see it. No other student can view it.</p>
-        <div class="file-input-wrap" style="margin-top:6px;">
-          <button class="btn btn-primary btn-sm" id="openUploadFormBtn">📤 Upload Answer Sheet (PDF / Image / RAR)</button>
-        </div>
-        <p class="small-note" style="margin-top:10px;"><strong>Important:</strong> on the form, type your name exactly as you use it here: <strong>${escapeHtml(profile.name)}</strong> — this is how your teacher matches your file to you.</p>
-        <label class="check-row" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
-          <input type="checkbox" id="confirmUploadCheck">
-          <span class="small-note" style="margin:0;">I've uploaded my file on the form above</span>
-        </label>
-        <div class="file-input-wrap" style="margin-top:10px;">
-          <button class="btn btn-primary btn-sm" id="confirmUploadBtn" disabled>✅ Confirm Submission</button>
-        </div>
-        <p class="small-note">${m.dueAt
-          ? `Confirming earns 🪙+100 coins, plus 🪙+50 if you upload before <strong>${new Date(m.dueAt).toLocaleString(undefined,{dateStyle:'medium', timeStyle:'short'})}</strong>. This also unlocks the next mission right away — your teacher will grade it separately.`
-          : `Confirming earns 🪙+100 coins, plus 🪙+50 since it's before the ${m.deadline||'deadline'}. This also unlocks the next mission right away — your teacher will grade it separately.`}</p>
       ` : `
         <label class="field-label" style="margin-top:10px;">Paste your Google Drive answer sheet link</label>
         <div class="link-row">
@@ -1714,16 +1801,6 @@ function renderMissionModal(id){
   const submitBtn = document.getElementById('submitBtn');
   if(submitBtn) submitBtn.addEventListener('click', ()=>handleSubmitMission(id));
 
-  const openUploadFormBtn = document.getElementById('openUploadFormBtn');
-  if(openUploadFormBtn) openUploadFormBtn.addEventListener('click', ()=>openLinkOrWarn(m.uploadFormLink, 'upload form'));
-
-  const confirmUploadCheck = document.getElementById('confirmUploadCheck');
-  const confirmUploadBtn = document.getElementById('confirmUploadBtn');
-  if(confirmUploadCheck && confirmUploadBtn){
-    confirmUploadCheck.addEventListener('change', ()=>{ confirmUploadBtn.disabled = !confirmUploadCheck.checked; });
-    confirmUploadBtn.addEventListener('click', ()=>handleSubmitMission(id, {viaForm:true}));
-  }
-
   const watchVideoBtn = document.getElementById('watchVideoBtn');
   if(watchVideoBtn) watchVideoBtn.addEventListener('click', ()=>openLinkOrWarn(m.videoLink, 'discussion video'));
 
@@ -1737,22 +1814,18 @@ function renderMissionModal(id){
   if(codeBtn) codeBtn.addEventListener('click', ()=>handleCode(id, m));
 }
 
-async function handleSubmitMission(id, opts){
-  const viaForm = !!(opts && opts.viaForm);
-  let link = '';
-  if(!viaForm){
-    const input = document.getElementById('answerLinkInput');
-    link = input.value.trim();
-    if(!link || !/^https?:\/\//i.test(link)){
-      input.style.borderColor = 'var(--red)';
-      input.placeholder = 'Paste a valid link starting with https://';
-      return;
-    }
+async function handleSubmitMission(id){
+  const input = document.getElementById('answerLinkInput');
+  const link = input.value.trim();
+  if(!link || !/^https?:\/\//i.test(link)){
+    input.style.borderColor = 'var(--red)';
+    input.placeholder = 'Paste a valid link starting with https://';
+    return;
   }
   const m = MISSIONS.find(x=>x.id===id);
   const sub = profile.submissions[id] || {};
   sub.submitted = true;
-  if(link) sub.link = link; // form-based submissions intentionally store no link, so no one else can see it
+  sub.link = link;
   // If the teacher set an exact deadline (dueAt), only award the on-time bonus
   // when the submission happens at or before that moment. No dueAt set = always on-time,
   // matching how missions behaved before deadlines were tracked precisely.
@@ -1771,7 +1844,7 @@ async function handleSubmitMission(id, opts){
   const streakGain = await maybeStreakBonus();
   await saveProfile();
 
-  const submitBtnEl = document.getElementById('submitBtn') || document.getElementById('confirmUploadBtn');
+  const submitBtnEl = document.getElementById('submitBtn');
   flashSuccess(submitBtnEl ? submitBtnEl.closest('.step-block') : null);
   coinBurst(gained, sub.onTime ? 'Mission Submitted 🚀' : 'Mission Submitted (Late) 🚀');
   if(streakGain) setTimeout(()=>coinBurst(streakGain, 'Streak Bonus 🔥'), 700);
@@ -1818,8 +1891,6 @@ function renderRPModal(id){
   document.getElementById('modalTitle').textContent = rp.title;
   document.getElementById('modalTopic').textContent = rp.topic || 'Covers everything up to this point';
 
-  const rpUsesUploadForm = !!(rp.uploadFormLink && String(rp.uploadFormLink).trim());
-
   const submitBlock = `
     <div class="step-block ${sub.submitted ? 'unlocked' : ''}">
       <div class="step-head"><span class="dot"></span> Step 1 — Submit Your Answer Sheet</div>
@@ -1828,24 +1899,8 @@ function renderRPModal(id){
         ${sub.submitted ? `<span class="pill-info">Submitted ✓</span>` : ''}
       </div>
       ${sub.submitted ? `
-        ${sub.link ? `<p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link)}" target="_blank" rel="noopener">${sub.link}</a></p>` : `<p class="small-note">✅ Your file was uploaded privately via Google Form — only your teacher can see it.</p>`}
+        <p class="small-note">Your submitted link: <a href="${escapeAttr(sub.link||'#')}" target="_blank" rel="noopener">${sub.link||''}</a></p>
         <div class="xp-toast-list">${sub.onTime!==false ? `<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag">🪙+50 On-time</span>`:`<span class="xp-tag">🪙+100 Submit</span><span class="xp-tag" style="background:var(--ink-soft);">Late — no on-time bonus</span>`}</div>
-      ` : rpUsesUploadForm ? `
-        <p class="small-note" style="margin-top:10px;">Your answer sheet stays private — only your teacher can see it. No other student can view it.</p>
-        <div class="file-input-wrap" style="margin-top:6px;">
-          <button class="btn btn-purple btn-sm" id="openRPUploadFormBtn">📤 Upload Answer Sheet (PDF / Image / RAR)</button>
-        </div>
-        <p class="small-note" style="margin-top:10px;"><strong>Important:</strong> on the form, type your name exactly as you use it here: <strong>${escapeHtml(profile.name)}</strong> — this is how your teacher matches your file to you.</p>
-        <label class="check-row" style="margin-top:10px; display:flex; align-items:center; gap:8px;">
-          <input type="checkbox" id="rpConfirmUploadCheck">
-          <span class="small-note" style="margin:0;">I've uploaded my file on the form above</span>
-        </label>
-        <div class="file-input-wrap" style="margin-top:10px;">
-          <button class="btn btn-purple btn-sm" id="rpConfirmUploadBtn" disabled>✅ Confirm Submission</button>
-        </div>
-        <p class="small-note">${rp.dueAt
-          ? `Confirming earns 🪙+100 coins, plus 🪙+50 if you upload before <strong>${new Date(rp.dueAt).toLocaleString(undefined,{dateStyle:'medium', timeStyle:'short'})}</strong>. Ranking papers don't block your mission progress.`
-          : `Confirming earns 🪙+100 coins, plus 🪙+50 since it's before the ${rp.deadline||'deadline'}. Ranking papers don't block your mission progress.`}</p>
       ` : `
         <label class="field-label" style="margin-top:10px;">Paste your Google Drive answer sheet link</label>
         <div class="link-row">
@@ -1880,34 +1935,22 @@ function renderRPModal(id){
   document.getElementById('openRPPaperBtn').addEventListener('click', ()=>openLinkOrWarn(rp.paperLink, 'paper'));
   const rpSubmitBtn = document.getElementById('rpSubmitBtn');
   if(rpSubmitBtn) rpSubmitBtn.addEventListener('click', ()=>handleSubmitRP(id));
-  const openRPUploadFormBtn = document.getElementById('openRPUploadFormBtn');
-  if(openRPUploadFormBtn) openRPUploadFormBtn.addEventListener('click', ()=>openLinkOrWarn(rp.uploadFormLink, 'upload form'));
-  const rpConfirmUploadCheck = document.getElementById('rpConfirmUploadCheck');
-  const rpConfirmUploadBtn = document.getElementById('rpConfirmUploadBtn');
-  if(rpConfirmUploadCheck && rpConfirmUploadBtn){
-    rpConfirmUploadCheck.addEventListener('change', ()=>{ rpConfirmUploadBtn.disabled = !rpConfirmUploadCheck.checked; });
-    rpConfirmUploadBtn.addEventListener('click', ()=>handleSubmitRP(id, {viaForm:true}));
-  }
   const rpMarkingBtn = document.getElementById('rpMarkingBtn');
   if(rpMarkingBtn) rpMarkingBtn.addEventListener('click', ()=>openLinkOrWarn(rp.markingSchemeLink, 'marking scheme'));
 }
 
-async function handleSubmitRP(id, opts){
-  const viaForm = !!(opts && opts.viaForm);
-  let link = '';
-  if(!viaForm){
-    const input = document.getElementById('rpAnswerLinkInput');
-    link = input.value.trim();
-    if(!link || !/^https?:\/\//i.test(link)){
-      input.style.borderColor = 'var(--red)';
-      input.placeholder = 'Paste a valid link starting with https://';
-      return;
-    }
+async function handleSubmitRP(id){
+  const input = document.getElementById('rpAnswerLinkInput');
+  const link = input.value.trim();
+  if(!link || !/^https?:\/\//i.test(link)){
+    input.style.borderColor = 'var(--red)';
+    input.placeholder = 'Paste a valid link starting with https://';
+    return;
   }
   const rp = RANKING_PAPERS.find(x=>x.id===id);
   const sub = profile.rpSubmissions[id] || {};
   sub.submitted = true;
-  if(link) sub.link = link; // form-based submissions intentionally store no link, so no one else can see it
+  sub.link = link;
   let onTime = true;
   if(rp && rp.dueAt){
     const dueTs = new Date(rp.dueAt).getTime();
@@ -1922,7 +1965,7 @@ async function handleSubmitRP(id, opts){
   if(sub.onTime){ profile.xp += 50; gained += 50; }
   await saveProfile();
 
-  const rpSubmitBtnEl = document.getElementById('rpSubmitBtn') || document.getElementById('rpConfirmUploadBtn');
+  const rpSubmitBtnEl = document.getElementById('rpSubmitBtn');
   flashSuccess(rpSubmitBtnEl ? rpSubmitBtnEl.closest('.step-block') : null);
   coinBurst(gained, sub.onTime ? 'Ranking Paper Submitted 🚀' : 'Ranking Paper Submitted (Late) 🚀');
 
