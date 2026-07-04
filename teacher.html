@@ -423,6 +423,25 @@ Ashan Fernando"></textarea>
   </div>
 </div>
 
+<!-- ================= MANAGE ACCESS MODAL ================= -->
+<div class="modal-overlay" id="accessModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="accessModalTitle">Manage Access</h3>
+      <button class="modal-close" id="accessModalCloseBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="small-note" style="margin-bottom:10px;">Tick any student below to hold their access — this item will disappear from their dashboard entirely until you untick them. Everyone else is unaffected.</p>
+      <input type="text" id="accessSearchInput" placeholder="Search students…" style="margin-bottom:10px;">
+      <div id="accessStudentList" style="max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" id="accessModalCancelBtn">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="accessModalSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    EICT ONLINE — Teacher Dashboard (private, login-protected)
@@ -461,8 +480,6 @@ const SCHEMAS = {
     {key:'dueAt', label:'Exact deadline date & time (used to decide the on-time bonus)', type:'datetime-local'},
     {key:'paperLink', label:'Paper — Google Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'videoLink', label:'Discussion video link', type:'text', placeholder:'https://drive.google.com/... or YouTube link'},
-    {key:'uploadFormLink', label:'Answer sheet upload — Google Form link (students submit their file here, privately)', type:'text', placeholder:'https://forms.gle/...'},
-    {key:'formResponsesLink', label:'Google Form "Responses" folder link (for you — jump straight to uploaded files while grading)', type:'text', placeholder:'https://drive.google.com/drive/folders/...'},
     {key:'markingSchemeLink', label:'Marking scheme — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'markedAnswerSheetLink', label:'Marked answer sheet — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'code', label:'Mission code (revealed after video, unlocks next mission bonus)', type:'text', placeholder:'NETWORK24'},
@@ -484,8 +501,6 @@ const SCHEMAS = {
     {key:'deadline', label:'Deadline (informational text shown to students)', type:'text', placeholder:'Day 10'},
     {key:'dueAt', label:'Exact deadline date & time (used to decide the on-time bonus)', type:'datetime-local'},
     {key:'paperLink', label:'Paper — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
-    {key:'uploadFormLink', label:'Answer sheet upload — Google Form link (students submit their file here, privately)', type:'text', placeholder:'https://forms.gle/...'},
-    {key:'formResponsesLink', label:'Google Form "Responses" folder link (for you — jump straight to uploaded files while grading)', type:'text', placeholder:'https://drive.google.com/drive/folders/...'},
     {key:'markingSchemeLink', label:'Marking scheme — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'active', label:'Published (visible to students)', type:'checkbox', default:true},
   ],
@@ -690,14 +705,13 @@ function buildGradingQueue(){
   STUDENTS.forEach(s=>{
     Object.entries(s.submissions||{}).forEach(([missionId,sub])=>{
       if(sub.submitted && sub.status==='pending'){
-        const m = MISSIONS.find(x=>x.id===missionId);
-        queue.push({studentKey:s._key, studentName:s.name, kind:'mission', itemId:missionId, itemTitle:missionTitleById(missionId), link:sub.link, formResponsesLink:m&&m.formResponsesLink, uploadFormLink:m&&m.uploadFormLink, ts:sub.ts||0});
+        queue.push({studentKey:s._key, studentName:s.name, kind:'mission', itemId:missionId, itemTitle:missionTitleById(missionId), link:sub.link, ts:sub.ts||0});
       }
     });
     Object.entries(s.rpSubmissions||{}).forEach(([rpId,sub])=>{
       if(sub.submitted && sub.status==='pending'){
         const rp = RANKING_PAPERS.find(x=>x.id===rpId);
-        queue.push({studentKey:s._key, studentName:s.name, kind:'rp', itemId:rpId, itemTitle: rp ? rp.title : '(deleted ranking paper)', link:sub.link, formResponsesLink:rp&&rp.formResponsesLink, uploadFormLink:rp&&rp.uploadFormLink, ts:sub.ts||0});
+        queue.push({studentKey:s._key, studentName:s.name, kind:'rp', itemId:rpId, itemTitle: rp ? rp.title : '(deleted ranking paper)', link:sub.link, ts:sub.ts||0});
       }
     });
   });
@@ -768,19 +782,21 @@ function renderMissionsTable(){
   el.innerHTML = `<tr><th>#</th><th>Title</th><th>Topic</th><th>Deadline</th><th>On-time cutoff</th><th>Status</th><th></th></tr>` +
     MISSIONS.map(m=>`<tr>
       <td class="mono">${m.order ?? '—'}</td>
-      <td><b>${escapeHtml(m.title)}</b></td>
+      <td><b>${escapeHtml(m.title)}</b> ${accessBadge(m)}</td>
       <td>${escapeHtml(m.topic||'—')}</td>
       <td>${escapeHtml(m.deadline||'—')}</td>
       <td style="font-size:12.5px;">${formatDueAt(m.dueAt)}</td>
       <td><span class="pill ${m.active!==false?'pill-live':'pill-draft'}">${m.active!==false?'Published':'Draft'}</span></td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" data-edit-mission="${m.id}">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-access-mission="${m.id}">🚫 Access</button>
         <button class="btn btn-ghost btn-sm" data-toggle-mission="${m.id}">${m.active!==false?'Unpublish':'Publish'}</button>
         <button class="btn btn-red btn-sm" data-delete-mission="${m.id}">Delete</button>
       </td>
     </tr>`).join('');
 
   el.querySelectorAll('[data-edit-mission]').forEach(b=>b.addEventListener('click', ()=>openItemForm('missions', MISSIONS.find(m=>m.id===b.dataset.editMission))));
+  el.querySelectorAll('[data-access-mission]').forEach(b=>b.addEventListener('click', ()=>openAccessModal('missions', MISSIONS.find(m=>m.id===b.dataset.accessMission))));
   el.querySelectorAll('[data-toggle-mission]').forEach(b=>b.addEventListener('click', ()=>togglePublish('missions', b.dataset.toggleMission)));
   el.querySelectorAll('[data-delete-mission]').forEach(b=>b.addEventListener('click', ()=>deleteItem('missions', b.dataset.deleteMission, 'mission')));
 }
@@ -797,17 +813,19 @@ function renderPlansTable(){
   el.innerHTML = `<tr><th>#</th><th>Title</th><th>Unlocks After</th><th>Status</th><th></th></tr>` +
     STUDY_PLANS.map(p=>`<tr>
       <td class="mono">${p.order ?? '—'}</td>
-      <td><b>${escapeHtml(p.title)}</b></td>
+      <td><b>${escapeHtml(p.title)}</b> ${accessBadge(p)}</td>
       <td>${escapeHtml(missionTitleById(p.unlocksAfterMissionId))}</td>
       <td><span class="pill ${p.active!==false?'pill-live':'pill-draft'}">${p.active!==false?'Published':'Draft'}</span></td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" data-edit-plan="${p.id}">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-access-plan="${p.id}">🚫 Access</button>
         <button class="btn btn-ghost btn-sm" data-toggle-plan="${p.id}">${p.active!==false?'Unpublish':'Publish'}</button>
         <button class="btn btn-red btn-sm" data-delete-plan="${p.id}">Delete</button>
       </td>
     </tr>`).join('');
 
   el.querySelectorAll('[data-edit-plan]').forEach(b=>b.addEventListener('click', ()=>openItemForm('studyPlans', STUDY_PLANS.find(p=>p.id===b.dataset.editPlan))));
+  el.querySelectorAll('[data-access-plan]').forEach(b=>b.addEventListener('click', ()=>openAccessModal('studyPlans', STUDY_PLANS.find(p=>p.id===b.dataset.accessPlan))));
   el.querySelectorAll('[data-toggle-plan]').forEach(b=>b.addEventListener('click', ()=>togglePublish('studyPlans', b.dataset.togglePlan)));
   el.querySelectorAll('[data-delete-plan]').forEach(b=>b.addEventListener('click', ()=>deleteItem('studyPlans', b.dataset.deletePlan, 'study plan')));
 }
@@ -824,19 +842,21 @@ function renderRPTable(){
   el.innerHTML = `<tr><th>#</th><th>Title</th><th>Appears After</th><th>Deadline</th><th>On-time cutoff</th><th>Status</th><th></th></tr>` +
     RANKING_PAPERS.map(p=>`<tr>
       <td class="mono">${p.order ?? '—'}</td>
-      <td><b>${escapeHtml(p.title)}</b></td>
+      <td><b>${escapeHtml(p.title)}</b> ${accessBadge(p)}</td>
       <td>${escapeHtml(missionTitleById(p.afterMissionId))}</td>
       <td>${escapeHtml(p.deadline||'—')}</td>
       <td style="font-size:12.5px;">${formatDueAt(p.dueAt)}</td>
       <td><span class="pill ${p.active!==false?'pill-live':'pill-draft'}">${p.active!==false?'Published':'Draft'}</span></td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" data-edit-rp="${p.id}">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-access-rp="${p.id}">🚫 Access</button>
         <button class="btn btn-ghost btn-sm" data-toggle-rp="${p.id}">${p.active!==false?'Unpublish':'Publish'}</button>
         <button class="btn btn-red btn-sm" data-delete-rp="${p.id}">Delete</button>
       </td>
     </tr>`).join('');
 
   el.querySelectorAll('[data-edit-rp]').forEach(b=>b.addEventListener('click', ()=>openItemForm('rankingPapers', RANKING_PAPERS.find(p=>p.id===b.dataset.editRp))));
+  el.querySelectorAll('[data-access-rp]').forEach(b=>b.addEventListener('click', ()=>openAccessModal('rankingPapers', RANKING_PAPERS.find(p=>p.id===b.dataset.accessRp))));
   el.querySelectorAll('[data-toggle-rp]').forEach(b=>b.addEventListener('click', ()=>togglePublish('rankingPapers', b.dataset.toggleRp)));
   el.querySelectorAll('[data-delete-rp]').forEach(b=>b.addEventListener('click', ()=>deleteItem('rankingPapers', b.dataset.deleteRp, 'ranking paper')));
 }
@@ -999,21 +1019,13 @@ function renderGrading(){
   }
   wrap.innerHTML = queue.map(q=>{
     const uid = `${q.studentKey}__${q.kind}__${q.itemId}`;
-    const openBtn = q.link
-      ? `<a href="${escapeAttr(q.link)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Open Submission</a>`
-      : (q.formResponsesLink
-          ? `<a href="${escapeAttr(q.formResponsesLink)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📂 Open Responses Folder</a>`
-          : (q.uploadFormLink
-              ? `<a href="${escapeAttr(q.uploadFormLink)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📤 Open Upload Form</a>`
-              : `<span class="small-note">No submission link on file</span>`));
     return `<div class="queue-card">
       <div class="qhead">
         <div>
           <div class="qstudent">${escapeHtml(q.studentName)}</div>
           <div class="qitem">${q.kind==='rp' ? '🏅 Ranking Paper: ' : '🗂️ '}${escapeHtml(q.itemTitle)}</div>
-          ${!q.link && (q.formResponsesLink||q.uploadFormLink) ? `<div class="small-note" style="margin-top:2px;">Submitted via Google Form — look for <strong>${escapeHtml(q.studentName)}</strong>'s file in the responses.</div>` : ''}
         </div>
-        ${openBtn}
+        <a href="${escapeAttr(q.link)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Open Submission</a>
       </div>
       <div class="qform">
         <input type="number" min="0" max="100" placeholder="Score %" id="score_${uid}">
@@ -1197,7 +1209,67 @@ async function regenerateCode(studentKey){
   }
 }
 
-/* ---------------- BULK ADD STUDENTS ---------------- */
+/* ---------------- MANAGE ACCESS (per-student hold) ---------------- */
+let currentAccessCollection = null;
+let currentAccessItem = null;
+
+function openAccessModal(collectionName, item){
+  currentAccessCollection = collectionName;
+  currentAccessItem = item;
+  document.getElementById('accessModalTitle').textContent = `Manage Access — ${escapeHtml(item.title||'Untitled')}`;
+  document.getElementById('accessSearchInput').value = '';
+  renderAccessStudentList('');
+  document.getElementById('accessModal').classList.add('show');
+}
+
+function renderAccessStudentList(filterText){
+  const wrap = document.getElementById('accessStudentList');
+  const hiddenFor = new Set(currentAccessItem.hiddenFor || []);
+  const q = (filterText||'').toLowerCase();
+  const sorted = [...STUDENTS].sort((a,b)=>a.name.localeCompare(b.name));
+  const filtered = q ? sorted.filter(s=>s.name.toLowerCase().includes(q)) : sorted;
+
+  if(filtered.length===0){
+    wrap.innerHTML = `<div class="empty-note">No students match that search.</div>`;
+    return;
+  }
+  wrap.innerHTML = filtered.map(s=>`
+    <label style="display:flex; align-items:center; gap:8px; padding:6px 4px; border-radius:6px; cursor:pointer;">
+      <input type="checkbox" class="access-student-check" data-student-key="${escapeAttr(s._key)}" ${hiddenFor.has(s._key)?'checked':''}>
+      <span>${escapeHtml(s.name)}</span>
+    </label>
+  `).join('');
+}
+
+document.getElementById('accessSearchInput').addEventListener('input', (e)=>renderAccessStudentList(e.target.value));
+document.getElementById('accessModalCloseBtn').addEventListener('click', ()=>document.getElementById('accessModal').classList.remove('show'));
+document.getElementById('accessModalCancelBtn').addEventListener('click', ()=>document.getElementById('accessModal').classList.remove('show'));
+document.getElementById('accessModal').addEventListener('click', (e)=>{ if(e.target.id==='accessModal') document.getElementById('accessModal').classList.remove('show'); });
+
+document.getElementById('accessModalSaveBtn').addEventListener('click', async ()=>{
+  const checked = [...document.querySelectorAll('.access-student-check:checked')].map(c=>c.dataset.studentKey);
+  const btn = document.getElementById('accessModalSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await db.collection(currentAccessCollection).doc(currentAccessItem.id).update({hiddenFor: checked});
+    currentAccessItem.hiddenFor = checked;
+    if(currentAccessCollection==='missions') renderMissionsTable();
+    if(currentAccessCollection==='studyPlans') renderPlansTable();
+    if(currentAccessCollection==='rankingPapers') renderRPTable();
+    document.getElementById('accessModal').classList.remove('show');
+  }catch(e){
+    console.error(e);
+    alert('Could not save access changes — please check your connection and try again.');
+  }
+  btn.disabled = false; btn.textContent = 'Save';
+});
+
+function accessBadge(item){
+  const n = (item.hiddenFor||[]).length;
+  return n>0 ? `<span class="pill pill-dup" title="Hidden from ${n} student${n===1?'':'s'}">🚫 ${n}</span>` : '';
+}
+
+
 document.getElementById('bulkAddBtn').addEventListener('click', ()=>{
   document.getElementById('bulkAddTextarea').value = '';
   document.getElementById('bulkAddModal').classList.add('show');
