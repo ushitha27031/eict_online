@@ -45,7 +45,7 @@
   ::selection{background:var(--amber-soft);}
 
   /* ---------- LOGIN ---------- */
-  #loginScreen{
+  #loginScreen, #setPasswordScreen{
     min-height:100vh; display:flex; align-items:center; justify-content:center;
     background:
       radial-gradient(circle at 12% 18%, rgba(43,168,154,0.16), transparent 40%),
@@ -53,6 +53,7 @@
       var(--bg);
     padding:24px;
   }
+  #setPasswordScreen{display:none;}
   .login-card{
     background:var(--surface); border:1px solid var(--border); border-radius:20px;
     box-shadow:var(--shadow); padding:44px 40px; width:100%; max-width:420px;
@@ -631,16 +632,32 @@
   <div class="login-card">
     <div class="badge-mark">E</div>
     <h1>EICT Online</h1>
-    <p class="tagline">ICT Final 50-Day Mission · Enter your Agent name and access code to open your mission dashboard. ✦</p>
+    <p class="tagline">ICT Final 50-Day Mission · Enter your Agent name, then your access code (or your own password, if you've already set one) to open your mission dashboard. ✦</p>
     <label class="field-label">Agent Name</label>
     <input type="text" id="loginName" placeholder="e.g. Nimal Perera" autocomplete="off">
-    <label class="field-label" style="margin-top:14px;">Access Code</label>
-    <input type="text" id="loginCode" placeholder="e.g. 7K2P9Q" autocomplete="off" style="text-transform:uppercase;">
+    <label class="field-label" style="margin-top:14px;">Access Code / Password</label>
+    <input type="text" id="loginCode" placeholder="Access code, or your password" autocomplete="off">
     <div class="auth-error" id="loginError"></div>
     <button class="btn btn-primary btn-block" id="loginBtn">🚀 Start / Resume Mission</button>
     <p class="login-foot">Don't have an access code? Ask your teacher — they assign one to each student.</p>
     <!-- Bump this text (and the date) every time you publish an update, so you can confirm at a glance that the new version has loaded -->
     <div class="build-tag">🆕 v1.1 · ICT Study Planner (06 Jul 2026)</div>
+  </div>
+</div>
+
+<!-- ================= SET PASSWORD (first login only) ================= -->
+<div id="setPasswordScreen">
+  <div class="login-card">
+    <div class="badge-mark">🔑</div>
+    <h1>Create Your Password</h1>
+    <p class="tagline">Access codes can be tricky to remember. Set your own easy password now — next time, you can log in with it instead of the access code. ✦</p>
+    <label class="field-label">New Password</label>
+    <input type="text" id="newPassword" placeholder="e.g. something easy to remember" autocomplete="off">
+    <label class="field-label" style="margin-top:14px;">Confirm Password</label>
+    <input type="text" id="confirmPassword" placeholder="Re-type your password" autocomplete="off">
+    <div class="auth-error" id="setPasswordError"></div>
+    <button class="btn btn-primary btn-block" id="setPasswordBtn">✅ Save & Continue to Dashboard</button>
+    <p class="login-foot">Your teacher can see this password in their dashboard too, so they can help if you ever forget it.</p>
   </div>
 </div>
 
@@ -1142,6 +1159,7 @@ function ensureProfileShape(p){
   p.streakBonusGiven = p.streakBonusGiven || {};
   p.purchases = p.purchases || {};
   p.photoURL = p.photoURL || '';
+  p.customPassword = p.customPassword || '';
   return p;
 }
 
@@ -1325,6 +1343,8 @@ document.getElementById('loginBtn').addEventListener('click', ()=>doLogin());
 document.getElementById('loginName').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 document.getElementById('loginCode').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
 
+let pendingLogin = null; // {key, name, existing} — waiting on a first-time password to be set
+
 async function doLogin(){
   clearLoginError();
   const nameInput = document.getElementById('loginName');
@@ -1348,12 +1368,87 @@ async function doLogin(){
     showLoginError("We couldn't find that name registered by your teacher. Check the spelling, or ask your teacher to add you.");
     return;
   }
-  if(String(existing.accessCode).toUpperCase() !== code){
-    showLoginError("That access code doesn't match. Double-check with your teacher.");
+
+  const accessCodeMatches = String(existing.accessCode).toUpperCase() === code;
+  const passwordMatches = !!existing.customPassword && String(existing.customPassword).toUpperCase() === code;
+
+  if(!accessCodeMatches && !passwordMatches){
+    showLoginError(existing.customPassword
+      ? "That doesn't match your access code or your password. Double-check with your teacher."
+      : "That access code doesn't match. Double-check with your teacher.");
+    return;
+  }
+
+  if(!existing.customPassword){
+    // First successful login with the access code — ask them to set an easy-to-remember password before entering.
+    pendingLogin = {key, name, existing};
+    showSetPasswordScreen();
     return;
   }
 
   await enterApp(key, name, existing);
+}
+
+function showSetPasswordScreen(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('setPasswordScreen').style.display = 'flex';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+  clearSetPasswordError();
+  document.getElementById('newPassword').focus();
+}
+
+function showSetPasswordError(msg){
+  const box = document.getElementById('setPasswordError');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+function clearSetPasswordError(){
+  const box = document.getElementById('setPasswordError');
+  box.style.display = 'none';
+  box.textContent = '';
+}
+
+document.getElementById('setPasswordBtn').addEventListener('click', ()=>submitNewPassword());
+document.getElementById('newPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('confirmPassword').focus(); });
+document.getElementById('confirmPassword').addEventListener('keydown', e=>{ if(e.key==='Enter') submitNewPassword(); });
+
+async function submitNewPassword(){
+  clearSetPasswordError();
+  if(!pendingLogin){ return; }
+
+  const pwInput = document.getElementById('newPassword');
+  const confirmInput = document.getElementById('confirmPassword');
+  const pw = pwInput.value.trim();
+  const confirmPw = confirmInput.value.trim();
+
+  if(!pw || pw.length < 4){
+    showSetPasswordError('Please choose a password that is at least 4 characters long.');
+    return;
+  }
+  if(pw !== confirmPw){
+    showSetPasswordError("Those two passwords don't match — please re-type them.");
+    return;
+  }
+  if(!db){ showSetPasswordError('Not connected to the database. Please check your internet connection.'); return; }
+
+  const btn = document.getElementById('setPasswordBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const {key, name, existing} = pendingLogin;
+  const updated = {...existing, customPassword: pw};
+  const ok = await setStudent(key, updated);
+
+  btn.disabled = false; btn.textContent = '✅ Save & Continue to Dashboard';
+
+  if(!ok){
+    showSetPasswordError('Could not save your password — please check your connection and try again.');
+    return;
+  }
+
+  document.getElementById('setPasswordScreen').style.display = 'none';
+  pendingLogin = null;
+  await enterApp(key, name, updated);
 }
 
 async function enterApp(key, name, existingDoc){
@@ -1400,10 +1495,12 @@ tryResumeSession();
 document.getElementById('logoutLink').addEventListener('click', ()=>{
   sessionStorage.removeItem(SESSION_KEY);
   document.getElementById('app').style.display = 'none';
+  document.getElementById('setPasswordScreen').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('loginName').value = '';
   document.getElementById('loginCode').value = '';
   clearLoginError();
+  pendingLogin = null;
   profile = null;
 });
 
