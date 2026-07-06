@@ -378,6 +378,29 @@
   .plan-summary-card h4{ margin:0 0 8px; font-size:15px; color:var(--primary); }
   .plan-summary-card p{ margin:0 0 6px; font-size:13.5px; line-height:1.65; color:var(--ink); }
 
+  /* ---------- ICT LESSON BREAKDOWN ---------- */
+  .ict-topic-row{
+    display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center;
+    padding:9px 12px; border-radius:9px; background:var(--surface-soft); margin-bottom:7px;
+  }
+  .ict-topic-name{ font-size:13px; font-weight:600; color:var(--ink); }
+  .ict-topic-row select{
+    padding:7px 10px; border-radius:8px; border:1.5px solid var(--border);
+    font-size:12.5px; font-family:'Inter'; background:#fff; color:var(--ink);
+  }
+  .ict-breakdown-chip{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12.5px; padding:8px 10px; border-radius:8px; margin-bottom:6px;
+    background:var(--surface-soft); border:1px solid var(--border);
+  }
+  .ict-breakdown-chip .lvl-tag{
+    font-size:10px; text-transform:uppercase; letter-spacing:.04em; font-weight:700;
+    padding:2px 7px; border-radius:6px; margin-left:8px;
+  }
+  .ict-breakdown-chip .lvl-weak{ background:#fde8e8; color:#b42318; }
+  .ict-breakdown-chip .lvl-average{ background:var(--amber-soft); color:#8a5a05; }
+  .ict-breakdown-chip .lvl-strong{ background:#e4f5ec; color:#1f7a45; }
+
   /* ---------- FX: BOOT OVERLAY (game-style intro, plays once on dashboard entry) ---------- */
   #bootOverlay{
     position:fixed; inset:0; z-index:9999;
@@ -923,6 +946,12 @@
           <p class="small-note" style="margin-bottom:10px;">Add each subject you're sitting, with your current average mark (your best honest estimate — weaker subjects automatically get more study time).</p>
           <div id="plannerSubjectRows"></div>
           <button class="btn btn-ghost btn-sm" id="addSubjectRowBtn" style="margin-top:6px;">+ Add Subject</button>
+        </div>
+
+        <div class="card" id="ictTopicCard" style="margin-bottom:18px; display:none;">
+          <h3><span class="ic">🖥️</span> ICT Lesson-by-Lesson Focus</h3>
+          <p class="small-note" style="margin-bottom:10px;">You've added ICT as a subject — rate how confident you feel in each lesson below. We'll split your ICT study time so the lessons you're weaker in get more attention and your strong lessons get lighter revision, which matters most once you start doing past papers.</p>
+          <div id="ictTopicRows"></div>
         </div>
 
         <div class="card" style="margin-bottom:18px;">
@@ -2291,9 +2320,82 @@ async function renderHallOfFame(){
 const DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const SUBJECT_COLORS = ['#1E4E8C','#2BA89A','#F2A93B','#7C5CBF','#D9534F','#3FA66B','#0EA5B0','#B45309'];
 
+// ---- ICT lesson-by-lesson focus (only shown/used for students who take ICT) ----
+const ICT_TOPICS = [
+  'Basic Concepts of ICT',
+  'Evolution of Computers',
+  'Number Systems',
+  'Logic Gates and Boolean Expressions',
+  'Operating Systems',
+  'Data Communication and Networking',
+  'System Analysis and Design',
+  'Database Management',
+  'Python Programming',
+  'Web Development (HTML and CSS)',
+  'Internet of Things (Arduino)',
+  'PHP',
+  'ICT in Business',
+  'New Trends in ICT',
+];
+const ICT_LEVEL_WEIGHT = {weak:3, average:2, strong:1}; // weaker lessons get proportionally more time
+const ICT_LEVEL_LABEL = {weak:'😟 Need practice', average:'🙂 Okay', strong:'💪 Confident'};
+
+function isICTSubjectName(name){
+  const n = (name||'').trim().toLowerCase();
+  if(!n) return false;
+  if(n === 'ict') return true;
+  if(/\bict\b/.test(n)) return true;
+  if(n.includes('information') && n.includes('communication') && n.includes('technology')) return true;
+  return false;
+}
+
+function renderICTTopicRows(savedLevels){
+  const wrap = document.getElementById('ictTopicRows');
+  wrap.innerHTML = ICT_TOPICS.map((topic,i)=>{
+    const saved = savedLevels && savedLevels[i];
+    const lvl = (saved && saved.level) || 'average';
+    return `
+      <div class="ict-topic-row" data-topic-idx="${i}">
+        <span class="ict-topic-name">${escapeHtml(topic)}</span>
+        <select class="ict-topic-level">
+          <option value="weak" ${lvl==='weak'?'selected':''}>😟 Need more practice</option>
+          <option value="average" ${lvl==='average'?'selected':''}>🙂 Doing okay</option>
+          <option value="strong" ${lvl==='strong'?'selected':''}>💪 Confident</option>
+        </select>
+      </div>
+    `;
+  }).join('');
+}
+
+function collectICTTopicLevels(){
+  return [...document.querySelectorAll('#ictTopicRows .ict-topic-row')].map((row,i)=>({
+    name: ICT_TOPICS[i],
+    level: row.querySelector('.ict-topic-level').value,
+  }));
+}
+
+function updateICTCardVisibility(){
+  const card = document.getElementById('ictTopicCard');
+  const hasICT = collectSubjectRows().some(r=>isICTSubjectName(r.name));
+  card.style.display = hasICT ? '' : 'none';
+}
+
+function buildICTBreakdown(dailyMins, ictTopicLevels){
+  const weighted = ictTopicLevels.map(t=>({...t, weight: ICT_LEVEL_WEIGHT[t.level] || 2}));
+  const totalW = weighted.reduce((sum,t)=>sum+t.weight,0);
+  return weighted
+    .map(t=>({
+      name: t.name,
+      level: t.level,
+      dailyMins: totalW>0 ? Math.round(dailyMins * (t.weight/totalW)) : 0,
+    }))
+    .sort((a,b)=> (ICT_LEVEL_WEIGHT[b.level]||2) - (ICT_LEVEL_WEIGHT[a.level]||2));
+}
+
 function renderPlannerView(){
   const saved = profile.studyPlanner || {};
   const subjects = (saved.subjects && saved.subjects.length) ? saved.subjects : [{name:'', avgMarks:''}];
+  renderICTTopicRows(saved.ictTopics);
   renderSubjectRows(subjects);
 
   document.getElementById('plannerSleep').value = saved.sleepHrs ?? '';
@@ -2324,6 +2426,7 @@ function renderSubjectRows(subjects){
       renderSubjectRows(rows);
     });
   });
+  updateICTCardVisibility();
 }
 
 function collectSubjectRows(){
@@ -2332,6 +2435,10 @@ function collectSubjectRows(){
     avgMarks: row.querySelector('.subj-marks').value,
   }));
 }
+
+document.getElementById('plannerSubjectRows').addEventListener('input', (e)=>{
+  if(e.target.classList.contains('subj-name')) updateICTCardVisibility();
+});
 
 document.getElementById('addSubjectRowBtn').addEventListener('click', ()=>{
   const rows = collectSubjectRows();
@@ -2372,9 +2479,11 @@ document.getElementById('generatePlanBtn').addEventListener('click', async ()=>{
 
   try{
     const subjects = rawSubjects.map(r=>({name:r.name, avgMarks: r.avgMarks==='' ? 50 : Math.max(0,Math.min(100,parseFloat(r.avgMarks)))}));
-    const plan = buildStudyPlan(subjects, sleepHrs, eatHrs, classHrs);
+    const hasICT = subjects.some(s=>isICTSubjectName(s.name));
+    const ictTopics = hasICT ? collectICTTopicLevels() : null;
+    const plan = buildStudyPlan(subjects, sleepHrs, eatHrs, classHrs, ictTopics);
 
-    profile.studyPlanner = {subjects, sleepHrs, eatHrs, classHrs, plan, generatedAt: Date.now()};
+    profile.studyPlanner = {subjects, sleepHrs, eatHrs, classHrs, ictTopics, plan, generatedAt: Date.now()};
     await saveProfile();
 
     renderPlanResult(plan);
@@ -2391,7 +2500,7 @@ document.getElementById('generatePlanBtn').addEventListener('click', async ()=>{
   }
 });
 
-function buildStudyPlan(subjects, sleepHrs, eatHrs, classHrs){
+function buildStudyPlan(subjects, sleepHrs, eatHrs, classHrs, ictTopicLevels){
   const REST_BUFFER_HRS = 2; // daily downtime for family, exercise, breathing room — never scheduled away
   const availableHrsPerDay = Math.max(0, 24 - sleepHrs - eatHrs - classHrs - REST_BUFFER_HRS);
   const availableMinsPerDay = availableHrsPerDay * 60;
@@ -2402,11 +2511,18 @@ function buildStudyPlan(subjects, sleepHrs, eatHrs, classHrs){
   }));
   const totalWeight = weighted.reduce((sum,s)=>sum+s.weight,0);
 
-  const perSubjectMins = weighted.map(s=>({
-    name: s.name,
-    avgMarks: s.avgMarks,
-    dailyMins: totalWeight>0 ? Math.round(availableMinsPerDay * (s.weight/totalWeight)) : 0,
-  }));
+  const perSubjectMins = weighted.map(s=>{
+    const dailyMins = totalWeight>0 ? Math.round(availableMinsPerDay * (s.weight/totalWeight)) : 0;
+    const entry = {
+      name: s.name,
+      avgMarks: s.avgMarks,
+      dailyMins,
+    };
+    if(ictTopicLevels && ictTopicLevels.length && isICTSubjectName(s.name)){
+      entry.ictBreakdown = buildICTBreakdown(dailyMins, ictTopicLevels);
+    }
+    return entry;
+  });
 
   const daysLeft = Math.max(0, Math.ceil((EXAM_DATE - new Date())/86400000));
   const weeksLeft = Math.max(1, Math.floor(daysLeft/7));
@@ -2444,6 +2560,20 @@ function renderPlanResult(plan){
   const totalDailyMins = plan.perSubjectMins.reduce((s,x)=>s+x.dailyMins,0);
   const examDateLabel = EXAM_DATE.toLocaleDateString(undefined,{dateStyle:'long'});
 
+  const ictEntry = plan.perSubjectMins.find(s=>s.ictBreakdown && s.ictBreakdown.length);
+  const ictBreakdownCard = ictEntry ? `
+    <div class="card" style="margin-top:16px;">
+      <h3><span class="ic">🖥️</span> Your ICT Lesson-by-Lesson Breakdown</h3>
+      <p class="small-note" style="margin-bottom:10px;">Out of your ${formatMins(ictEntry.dailyMins)} of daily ICT time, here's how to split it — weighted toward the lessons you marked as needing more practice. When you sit past papers, attempt questions from your weaker lessons first, then move on to the ones you're confident in.</p>
+      ${ictEntry.ictBreakdown.map(t=>`
+        <div class="ict-breakdown-chip">
+          <span>${escapeHtml(t.name)}</span>
+          <span><strong>${formatMins(t.dailyMins)}/day</strong><span class="lvl-tag lvl-${t.level}">${t.level}</span></span>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
   wrap.innerHTML = `
     <div class="card">
       <h3><span class="ic">🗓️</span> Your Weekly Study Template</h3>
@@ -2451,11 +2581,14 @@ function renderPlanResult(plan){
       <div class="plan-week-grid">${weekGrid}</div>
     </div>
 
+    ${ictBreakdownCard}
+
     <div class="plan-summary-card">
       <h4>💬 You've got this — here's why</h4>
       <p>You have <strong>${plan.daysLeft} days</strong> (about <strong>${plan.weeksLeft} weeks</strong>) left before your exams start on <strong>${examDateLabel}</strong>.</p>
       <p>Without touching your sleep, meals, or class time, you have roughly <strong>${plan.availableHrsPerDay.toFixed(1)} focused hours a day</strong> — about <strong>${plan.totalWeeklyStudyHrs} hours a week</strong> — genuinely available for study. That's not nothing. That's enough.</p>
       <p>If you start <strong>today</strong> and simply follow this pattern day after day, every subject gets consistent, repeated attention all the way to exam day — including extra time on the subjects you marked as weaker. You don't need to cram everything at once. You just need to show up daily, the same way you've been showing up for your missions.</p>
+      ${ictEntry ? `<p>For ICT specifically, spend your practice-paper time on the lessons marked "need practice" first — that's where the easiest extra marks are hiding.</p>` : ''}
       <p style="font-weight:700; color:var(--primary);">කැපවීම = ප්‍රතිඵලය — Dedication equals results. Stick to the plan, trust the process, and you will be ready.</p>
     </div>
 
