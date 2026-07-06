@@ -238,7 +238,7 @@
         <div class="badge-mark">E</div>
         <div>
           <div class="brand-name">EICT Online</div>
-          <div class="brand-sub">Teacher Dashboard</div>
+          <div class="brand-sub">Teacher Dashboard · v1.2</div>
         </div>
       </div>
       <div class="lock-notice">🔒 Private staff area. Never share this link or file with students.</div>
@@ -1122,8 +1122,8 @@ function renderStudents(){
             ? `<span class="mono" style="font-weight:700; letter-spacing:0.05em;">${escapeHtml(s.accessCode)}</span> <button class="btn btn-ghost btn-sm" data-regen-code="${s._key}" title="Generate a new code">↻</button>`
             : `<button class="btn btn-amber btn-sm" data-regen-code="${s._key}">Generate code</button>`}</td>
         <td>${s.customPassword
-            ? `<span class="mono" style="font-weight:700; letter-spacing:0.05em;">${escapeHtml(s.customPassword)}</span> <button class="btn btn-ghost btn-sm" data-reset-password="${s._key}" title="Clear this password so the student can set a new one">↻</button>`
-            : `<span style="color:var(--ink-soft); font-size:12px;">Not set yet</span>`}</td>
+            ? `<span class="mono" style="font-weight:700; letter-spacing:0.05em;">${escapeHtml(s.customPassword)}</span> <button class="btn btn-ghost btn-sm" data-reset-password="${s._key}" title="Clear it so they can set a new one at next login">↻</button>`
+            : `<span style="color:var(--ink-soft); font-size:12.5px;">Not set yet</span>`}</td>
         <td class="mono">🪙 ${s.xp||0}</td>
         <td class="mono">🪙 ${walletBalance(s)}</td>
         <td class="mono">${totalMarks(s)}</td>
@@ -1158,7 +1158,6 @@ function defaultStudentDoc(name){
   return {
     name,
     accessCode: generateAccessCode(),
-    customPassword: '',
     xp: 0,
     photoURL: '',
     submissions: {},
@@ -1217,7 +1216,7 @@ async function regenerateCode(studentKey){
 async function resetStudentPassword(studentKey){
   const student = STUDENTS.find(s=>s._key===studentKey);
   if(!student) return;
-  if(!confirm(`Clear ${student.name}'s saved password?\n\nThey'll be asked to set a brand new one the next time they log in with their access code.`)) return;
+  if(!confirm(`Clear the saved password for ${student.name}? They'll be asked to set a new one next time they log in with their access code.`)) return;
 
   try{
     await db.collection('students').doc(studentKey).update({customPassword: firebase.firestore.FieldValue.delete()});
@@ -1225,7 +1224,7 @@ async function resetStudentPassword(studentKey){
     renderStudents();
   }catch(e){
     console.error(e);
-    alert('Could not reset the password — please check your connection and try again.');
+    alert('Could not clear the password — please try again.');
   }
 }
 
