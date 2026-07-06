@@ -89,6 +89,11 @@
   .btn-sm{padding:8px 14px; font-size:13px; border-radius:8px;}
   .btn:disabled{opacity:.45; cursor:not-allowed;}
   .login-foot{margin-top:18px; font-size:12px; color:var(--ink-soft);}
+  .build-tag{
+    margin-top:16px; display:inline-flex; align-items:center; gap:6px;
+    background:var(--teal-soft); color:var(--teal); font-weight:700; font-size:11px;
+    padding:5px 12px; border-radius:999px; letter-spacing:.02em;
+  }
   .auth-error{display:none; background:#fde8e8; color:#b42318; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:14px; text-align:left;}
 
   /* ---------- LOADING ---------- */
@@ -634,6 +639,8 @@
     <div class="auth-error" id="loginError"></div>
     <button class="btn btn-primary btn-block" id="loginBtn">🚀 Start / Resume Mission</button>
     <p class="login-foot">Don't have an access code? Ask your teacher — they assign one to each student.</p>
+    <!-- Bump this text (and the date) every time you publish an update, so you can confirm at a glance that the new version has loaded -->
+    <div class="build-tag">🆕 v1.1 · ICT Study Planner (06 Jul 2026)</div>
   </div>
 </div>
 
