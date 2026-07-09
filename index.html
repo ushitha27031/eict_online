@@ -575,7 +575,7 @@
   }
 
   /* =====================================================================
-     PYTHON ARENA — standalone arcade mini-games
+     CODE ARENA — standalone arcade mini-games (Python, HTML & CSS)
      Retro terminal-cabinet theme: deep indigo cabinet, neon green/cyan/pink/
      yellow accents, JetBrains Mono "LED" readouts. Deliberately louder than
      the rest of the dashboard — this is the one place built to feel like a
@@ -631,8 +631,19 @@
   }
   .pya-stat-chip .n{font-family:'JetBrains Mono'; font-weight:800; font-size:19px; color:var(--pya-yellow); text-shadow:0 0 8px rgba(255,217,61,0.45);}
   .pya-stat-chip .l{font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--pya-ink-dim); margin-top:3px;}
-  .pya-cabinets{position:relative; z-index:2; display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .pya-cabinets{position:relative; z-index:2; display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px;}
   @media(max-width:900px){ .pya-cabinets{grid-template-columns:1fr;} }
+  .pya-cat-tabs{position:relative; z-index:2; display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+  .pya-cat-tab{
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:var(--pya-ink-dim);
+    padding:9px 16px; border-radius:10px; font-weight:700; font-size:12.5px; cursor:pointer;
+    font-family:'Space Grotesk'; transition:background .15s, color .15s, box-shadow .15s;
+  }
+  .pya-cat-tab:hover{background:rgba(255,255,255,0.12); color:#fff;}
+  .pya-cat-tab.active{
+    background:linear-gradient(135deg, var(--pya-green), #1fbf67); color:#04210f; border-color:transparent;
+    box-shadow:0 0 14px rgba(57,255,136,0.45);
+  }
   .pya-cabinet{
     background:linear-gradient(160deg, var(--pya-bg-panel), var(--pya-bg-panel2));
     border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px 16px; text-align:center;
@@ -711,6 +722,18 @@
   .pya-btn-row{display:flex; gap:10px; justify-content:center; margin-top:18px; flex-wrap:wrap;}
   .pya-btn-secondary{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); color:#fff; padding:11px 20px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer;}
   .pya-btn-secondary:hover{background:rgba(255,255,255,0.16);}
+  .pya-ss-preview{
+    background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px;
+    padding:16px; margin-bottom:14px;
+  }
+  .pya-ss-preview-label{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--pya-ink-dim); margin-bottom:10px; font-weight:700; text-align:center;}
+  .pya-ss-stage{display:flex; align-items:center; justify-content:center; min-height:60px; flex-wrap:wrap;}
+  .pya-ss-stage.small{min-height:46px; transform:scale(.85);}
+  .pya-ss-rule{font-family:'JetBrains Mono'; color:#8a94c0; font-size:12px; margin:2px 0 2px 2px;}
+  .pya-ss-selector{color:var(--pya-cyan);}
+  .pya-ss-compare{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;}
+  .pya-ss-compare>div{background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px;}
+  .pya-build-stage{display:flex; align-items:center; justify-content:center; min-height:70px; flex-wrap:wrap; gap:8px;}
   .pya-confetti-piece{position:fixed; top:-10px; width:8px; height:14px; border-radius:2px; z-index:9999; pointer-events:none; animation:pyaFall linear forwards;}
   @keyframes pyaFall{ to{ transform:translateY(110vh) rotate(720deg); opacity:.25; } }
   @media (prefers-reduced-motion: reduce){
@@ -813,7 +836,7 @@
         <button data-view="stats"><span class="ic">📊</span> Mission Stats</button>
         <button data-view="hof"><span class="ic">👑</span> Hall of Fame</button>
         <button data-view="planner"><span class="ic">📅</span> Study Planner</button>
-        <button data-view="pygame"><span class="ic">🐍</span> Python Arena</button>
+        <button data-view="pygame"><span class="ic">🕹️</span> Code Arena</button>
       </nav>
       <div class="sidebar-foot">
         <div class="agent-mini">
@@ -1123,12 +1146,12 @@
         <div id="plannerResultWrap"></div>
       </section>
 
-      <!-- ---------- PYTHON ARENA (standalone arcade mini-games) ---------- -->
+      <!-- ---------- CODE ARENA (standalone arcade mini-games) ---------- -->
       <section class="view" id="view-pygame">
         <div class="topbar">
           <div>
-            <h2>🐍 Python Arena</h2>
-            <div class="sub">Three arcade challenges to sharpen your Python. This is just for fun & practice — scores live on this device only, separate from your mission coins.</div>
+            <h2>🕹️ Code Arena</h2>
+            <div class="sub">Arcade challenges to sharpen your Python, HTML & CSS. This is just for fun & practice — scores live on this device only, separate from your mission coins.</div>
           </div>
         </div>
 
@@ -1141,6 +1164,7 @@
           <div class="pya-stats-row" id="pyaStatsRow"></div>
 
           <div id="pyaHub">
+            <div class="pya-cat-tabs" id="pyaCatTabs"></div>
             <div class="pya-cabinets" id="pyaCabinets"></div>
           </div>
 
@@ -2865,8 +2889,8 @@ function formatMins(mins){
 }
 
 /* =====================================================================
-   PYTHON ARENA — standalone arcade mini-games (own scoring, localStorage)
-   Three modes: Quiz Battle, Code Order Puzzle, Bug Hunter.
+   CODE ARENA — standalone arcade mini-games (own scoring, localStorage)
+   Modes: Quiz Battle, Code Order Puzzle, Bug Hunter (Python, HTML & CSS).
    Entirely self-contained: does not touch the mission/coin/profile system.
    ===================================================================== */
 (function(){
@@ -2874,14 +2898,17 @@ function formatMins(mins){
   const PYA_LS_KEY = 'pyArenaData_v1';
 
   function pyaLoad(){
+    const defaults = { totalPoints:0, gamesPlayed:0, muted:false, best:{quiz:0,puzzle:0,bug:0,tagmatch:0,stylesleuth:0,buildlive:0}, bestStreak:0 };
     try{
       const raw = localStorage.getItem(PYA_LS_KEY);
       if(raw){
         const parsed = JSON.parse(raw);
-        return Object.assign({ totalPoints:0, gamesPlayed:0, muted:false, best:{quiz:0,puzzle:0,bug:0}, bestStreak:0 }, parsed);
+        const merged = Object.assign({}, defaults, parsed);
+        merged.best = Object.assign({}, defaults.best, parsed.best||{});
+        return merged;
       }
     }catch(e){}
-    return { totalPoints:0, gamesPlayed:0, muted:false, best:{quiz:0,puzzle:0,bug:0}, bestStreak:0 };
+    return defaults;
   }
   let pyaData = pyaLoad();
   function pyaSave(){ try{ localStorage.setItem(PYA_LS_KEY, JSON.stringify(pyaData)); }catch(e){} }
@@ -2891,8 +2918,8 @@ function formatMins(mins){
     {min:300,  name:'Garden Snake',    icon:'🐍'},
     {min:800,  name:'Script Viper',    icon:'⚡'},
     {min:1500, name:'Cobra Coder',     icon:'🔥'},
-    {min:2500, name:'Python Charmer',  icon:'🎩'},
-    {min:4000, name:'Python Master',   icon:'👑'},
+    {min:2500, name:'Code Charmer',   icon:'🎩'},
+    {min:4000, name:'Code Master',    icon:'👑'},
   ];
   function pyaLevelFor(points){
     let cur = PYA_LEVELS[0];
@@ -3028,9 +3055,134 @@ function formatMins(mins){
     { title:'No ++ in Python', code:['count = 0','count++','print(count)'], bug:1, e:"Python has no ++ operator like some other languages — use 'count += 1' instead." },
   ];
 
+  /* ---------------- HTML TAG MATCH (Tag Match Rush) ---------------- */
+  const PYA_TAGMATCH = [
+    {q:'Which tag creates a clickable hyperlink?', o:['<link>','<a>','<href>','<nav>'], a:1, e:'<a> (anchor) creates a hyperlink — the destination goes in its href attribute.'},
+    {q:'Which tag embeds an image on the page?', o:['<img>','<src>','<picture>','<image>'], a:0, e:'<img> displays an image, using its src attribute for the file path.'},
+    {q:'Which tag is the single biggest heading?', o:['<h6>','<head>','<h1>','<header>'], a:2, e:'<h1> is the largest, most important heading — page titles usually use it once.'},
+    {q:'Which tag defines a paragraph of text?', o:['<p>','<text>','<para>','<span>'], a:0, e:'<p> wraps a block of paragraph text.'},
+    {q:'Which tag creates an unordered (bulleted) list?', o:['<ol>','<list>','<ul>','<li>'], a:2, e:'<ul> holds bullet-point list items; <ol> would number them instead.'},
+    {q:'Which tag marks a single item inside a list?', o:['<item>','<li>','<ul>','<point>'], a:1, e:'<li> (list item) goes inside a <ul> or <ol>.'},
+    {q:'Which tag creates a table row?', o:['<td>','<tr>','<th>','<row>'], a:1, e:'<tr> defines a table row; <td> defines the cells inside it.'},
+    {q:'Which tag creates a table header cell?', o:['<th>','<td>','<head>','<tbody>'], a:0, e:'<th> marks a header cell — browsers bold and center it by default.'},
+    {q:'Which tag wraps a whole HTML form?', o:['<input>','<form>','<label>','<fieldset>'], a:1, e:'<form> is the container that groups form controls and defines how they submit.'},
+    {q:'Which tag creates a clickable button?', o:['<btn>','<click>','<button>','<input type="click">'], a:2, e:'<button> creates a clickable button element.'},
+    {q:'Which tag is a generic block-level container?', o:['<span>','<div>','<block>','<container>'], a:1, e:'<div> is the standard block-level container used to group other elements.'},
+    {q:'Which tag is a generic inline container?', o:['<div>','<inline>','<span>','<p>'], a:2, e:'<span> groups inline content without starting a new line.'},
+    {q:'Which tag inserts a single line break?', o:['<break>','<br>','<lb>','<newline>'], a:1, e:'<br> forces a line break without starting a new paragraph.'},
+    {q:'Which tag draws a horizontal divider line?', o:['<hr>','<line>','<div>','<hl>'], a:0, e:'<hr> (horizontal rule) draws a divider line across the page.'},
+    {q:'Which tag holds the page title shown in the browser tab?', o:['<header>','<h1>','<title>','<meta>'], a:2, e:'<title>, placed inside <head>, sets the text shown on the browser tab.'},
+    {q:'Which tag defines the main navigation links?', o:['<nav>','<menu>','<links>','<navbar>'], a:0, e:'<nav> semantically marks a block of navigation links.'},
+  ];
+
+  /* ---------------- CSS BUG HUNTS (Style Sleuth) ---------------- */
+  const PYA_CSS_BUGS = [
+    { title:'Button Not Centered',
+      html:'<button class="{{CLS}}">Click Me</button>',
+      base:"padding:10px 24px;border:none;border-radius:8px;background:linear-gradient(135deg,#34E4EA,#1aa8ad);color:#04262b;font-weight:700;cursor:pointer;",
+      lines:['display: block;','margin: 0 auauto;','font-size: 13px;'], bug:1, fix:'margin: 0 auto;',
+      e:'"auauto" is not a real CSS keyword. An invalid value makes the whole declaration invalid, so it gets dropped — the button falls back to sitting on the left instead of centering.' },
+    { title:'Invisible Heading',
+      html:'<div class="{{CLS}}">Welcome Back!</div>',
+      base:"font-family:'Space Grotesk',sans-serif;",
+      lines:['font-size: 20px;','font-weight: 800;','colr: #FF3E9A;'], bug:2, fix:'color: #FF3E9A;',
+      e:'The property is misspelled — "colr" isn\'t a real CSS property, so the browser ignores it completely and the text stays the default color.' },
+    { title:"Box Won't Resize",
+      html:'<div class="{{CLS}}"></div>',
+      base:"height:40px;background:linear-gradient(135deg,#FFD93D,#e0b400);border-radius:8px;",
+      lines:['width: 220;','margin-top: 4px;'], bug:0, fix:'width: 220px;',
+      e:'Length values need a unit. "220" with no px, %, or rem is invalid, so the whole declaration is dropped and the box keeps its default width.' },
+    { title:'Flexbox Fail',
+      html:'<div class="{{CLS}}"><span>A</span><span>B</span><span>C</span></div>',
+      base:"", extraCss:"{CLS} span{background:#241748;color:#fff;padding:8px 14px;border-radius:6px;font-family:'JetBrains Mono';font-size:12px;}",
+      lines:['display: flexbox;','gap: 8px;','align-items: center;'], bug:0, fix:'display: flex;',
+      e:'The value should be "flex", not "flexbox". An unrecognized value is invalid, so the layout falls back to block and the items stack instead of lining up in a row.' },
+    { title:'Rounded Corner Vanishes',
+      html:'<div class="{{CLS}}"></div>',
+      base:"width:90px;height:50px;background:linear-gradient(135deg,#FF3E9A,#c72172);",
+      lines:['border-radius: 12 px;','margin: 0 auto;'], bug:0, fix:'border-radius: 12px;',
+      e:'There can\'t be a space between the number and its unit. "12 px" is invalid, so the whole declaration is dropped and the corners stay sharp.' },
+    { title:'Background Missing',
+      html:'<div class="{{CLS}}">Panel</div>',
+      base:"padding:14px;border-radius:8px;color:#fff;font-weight:700;text-align:center;",
+      lines:['bg-color: #34E4EA;','font-size: 13px;'], bug:0, fix:'background-color: #34E4EA;',
+      e:'"bg-color" isn\'t a real CSS property — it\'s "background-color". Invalid properties are ignored, so no color shows up.' },
+    { title:"Text Won't Bold",
+      html:'<div class="{{CLS}}">Important Notice</div>',
+      base:"font-size:15px;color:#fff;",
+      lines:['font-weight: strong;','letter-spacing: .3px;'], bug:0, fix:'font-weight: bold;',
+      e:'"strong" is an HTML tag name, not a CSS keyword. font-weight needs a value like "bold" or "700" — an invalid value gets dropped.' },
+    { title:'Shadow Missing',
+      html:'<div class="{{CLS}}"></div>',
+      base:"width:80px;height:50px;background:#1B1140;border-radius:8px;",
+      lines:['boxshadow: 0 4px 14px rgba(255,62,154,.6);','margin: 0 auto;'], bug:0, fix:'box-shadow: 0 4px 14px rgba(255,62,154,.6);',
+      e:'The property name needs a hyphen — it\'s "box-shadow", not "boxshadow". Without it, it isn\'t recognized as a real property.' },
+  ];
+
+  /* ---------------- BUILD-IT-LIVE (HTML + CSS combo, drag-order with live preview) ---------------- */
+  const PYA_BUILDS = [
+    { title:'Streak Badge', lines:[
+        '<style>',
+        ".bi-a{display:flex;align-items:center;gap:8px;background:#1B1140;padding:10px 16px;border-radius:12px;color:#fff;font-family:'JetBrains Mono';}",
+        '</style>',
+        '<div class="bi-a">🔥 7-day streak</div>'
+      ]},
+    { title:'Level Chip', lines:[
+        '<style>',
+        '.bi-b{background:linear-gradient(135deg,#34E4EA,#1aa8ad);color:#04262b;padding:8px 18px;border-radius:20px;font-weight:800;display:inline-block;}',
+        '</style>',
+        '<span class="bi-b">⚡ Level 5</span>'
+      ]},
+    { title:'Alert Box', lines:[
+        '<style>',
+        '.bi-c{border-left:4px solid #FF3E9A;background:rgba(255,62,154,.12);padding:12px 16px;border-radius:6px;color:#fff;}',
+        '.bi-c strong{color:#FF3E9A;}',
+        '</style>',
+        '<div class="bi-c"><strong>Warning:</strong> Quiz closes in 5 minutes.</div>'
+      ]},
+    { title:'Progress Pill', lines:[
+        '<style>',
+        '.bi-d{background:#0d0821;border-radius:20px;padding:4px;width:160px;}',
+        '.bi-d .fill{height:10px;width:70%;border-radius:20px;background:#FFD93D;}',
+        '</style>',
+        '<div class="bi-d"><div class="fill"></div></div>'
+      ]},
+    { title:'Player Card', lines:[
+        '<style>',
+        ".bi-e{background:linear-gradient(160deg,#241748,#1B1140);padding:14px 18px;border-radius:14px;color:#fff;text-align:center;font-family:'Space Grotesk';}",
+        '.bi-e .rank{font-size:24px;}',
+        '</style>',
+        '<div class="bi-e"><div class="rank">🐍</div>Cobra Coder</div>'
+      ]},
+    { title:'Coin Toast', lines:[
+        '<style>',
+        '.bi-f{display:inline-flex;align-items:center;gap:6px;background:#FFD93D;color:#3a2c02;padding:6px 14px;border-radius:20px;font-weight:800;}',
+        '</style>',
+        '<span class="bi-f">🪙 +50</span>'
+      ]},
+  ];
+
   /* ---------------- STATE ---------------- */
-  let pyaGame = null;      // 'quiz' | 'puzzle' | 'bug' | null (hub)
+  let pyaGame = null;      // 'quiz' | 'puzzle' | 'bug' | 'tagmatch' | 'stylesleuth' | 'buildlive' | null (hub)
   let pyaSession = {};
+  let pyaCurrentCat = 'python';
+
+  const PYA_CATS = [
+    { key:'python', label:'🐍 Python', cabinets:[
+        {mode:'quiz',   color:'c-cyan',   icon:'⚡', title:'Quiz Battle',        desc:"10 timed questions. 3 lives. Chain correct answers for combo points.", bestKey:'quiz'},
+        {mode:'puzzle', color:'c-pink',   icon:'🧩', title:'Code Order Puzzle', desc:'8 scrambled programs. Drag or reorder the lines to make them run.', bestKey:'puzzle'},
+        {mode:'bug',    color:'c-yellow', icon:'🐞', title:'Bug Hunter',        desc:"8 broken snippets. Click the line hiding the bug before time's up.", bestKey:'bug'},
+    ]},
+    { key:'html', label:'🌐 HTML', cabinets:[
+        {mode:'tagmatch', color:'c-cyan', icon:'🏷️', title:'Tag Match Rush', desc:'Tags fly by fast — pick the right one before the clock runs out. Gets faster every round!', bestKey:'tagmatch'},
+    ]},
+    { key:'css', label:'🎨 CSS', cabinets:[
+        {mode:'stylesleuth', color:'c-yellow', icon:'🔍', title:'Style Sleuth', desc:'Spot the broken CSS line and watch the live preview react — before and after the fix.', bestKey:'stylesleuth'},
+    ]},
+    { key:'combo', label:'🧬 Mixed', cabinets:[
+        {mode:'buildlive', color:'c-pink', icon:'🛠️', title:'Build It Live', desc:'Drag scrambled HTML & CSS lines into order — watch your build render live as you go.', bestKey:'buildlive'},
+    ]},
+  ];
 
   /* ---------------- HUB ---------------- */
   function renderPythonArena(){
@@ -3055,13 +3207,14 @@ function formatMins(mins){
 
     pyaRenderMarquee();
     pyaRenderStats();
+    pyaRenderCatTabs();
     pyaRenderCabinets();
   }
 
   function pyaRenderMarquee(){
     const lvl = pyaLevelFor(pyaData.totalPoints);
     const track = document.getElementById('pyaMarqueeTrack');
-    track.textContent = `🐍 PYTHON ARENA  —  HI-SCORE ${String(pyaData.totalPoints).padStart(6,'0')}  —  RANK: ${lvl.icon} ${lvl.name.toUpperCase()}  —  BEST STREAK ${pyaData.bestStreak}  —  INSERT KNOWLEDGE TO CONTINUE  —  `;
+    track.textContent = `🕹️ CODE ARENA  —  HI-SCORE ${String(pyaData.totalPoints).padStart(6,'0')}  —  RANK: ${lvl.icon} ${lvl.name.toUpperCase()}  —  BEST STREAK ${pyaData.bestStreak}  —  INSERT KNOWLEDGE TO CONTINUE  —  `;
   }
 
   function pyaRenderStats(){
@@ -3074,31 +3227,33 @@ function formatMins(mins){
     `;
   }
 
+  function pyaRenderCatTabs(){
+    const wrap = document.getElementById('pyaCatTabs');
+    if(!wrap) return;
+    wrap.innerHTML = PYA_CATS.map(cat=>`<button class="pya-cat-tab ${cat.key===pyaCurrentCat?'active':''}" data-cat="${cat.key}">${cat.label}</button>`).join('');
+    wrap.querySelectorAll('.pya-cat-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        if(btn.dataset.cat === pyaCurrentCat) return;
+        pyaSoundClick();
+        pyaCurrentCat = btn.dataset.cat;
+        pyaRenderCatTabs();
+        pyaRenderCabinets();
+      });
+    });
+  }
+
   function pyaRenderCabinets(){
     const cabs = document.getElementById('pyaCabinets');
-    cabs.innerHTML = `
-      <div class="pya-cabinet c-cyan">
-        <div class="glow-icon">⚡</div>
-        <h4>Quiz Battle</h4>
-        <p>10 timed questions. 3 lives. Chain correct answers for combo points.</p>
-        <div class="best">Best: ${pyaData.best.quiz} pts</div>
-        <button class="pya-btn-play" data-mode="quiz">▶ PLAY</button>
+    const cat = PYA_CATS.find(c=>c.key===pyaCurrentCat) || PYA_CATS[0];
+    cabs.innerHTML = cat.cabinets.map(c=>`
+      <div class="pya-cabinet ${c.color}">
+        <div class="glow-icon">${c.icon}</div>
+        <h4>${pyaEsc(c.title)}</h4>
+        <p>${pyaEsc(c.desc)}</p>
+        <div class="best">Best: ${pyaData.best[c.bestKey]||0} pts</div>
+        <button class="pya-btn-play" data-mode="${c.mode}">▶ PLAY</button>
       </div>
-      <div class="pya-cabinet c-pink">
-        <div class="glow-icon">🧩</div>
-        <h4>Code Order Puzzle</h4>
-        <p>8 scrambled programs. Drag or reorder the lines to make them run.</p>
-        <div class="best">Best: ${pyaData.best.puzzle} pts</div>
-        <button class="pya-btn-play" data-mode="puzzle">▶ PLAY</button>
-      </div>
-      <div class="pya-cabinet c-yellow">
-        <div class="glow-icon">🐞</div>
-        <h4>Bug Hunter</h4>
-        <p>8 broken snippets. Click the line hiding the bug before time's up.</p>
-        <div class="best">Best: ${pyaData.best.bug} pts</div>
-        <button class="pya-btn-play" data-mode="bug">▶ PLAY</button>
-      </div>
-    `;
+    `).join('');
     cabs.querySelectorAll('[data-mode]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         pyaSoundClick();
@@ -3106,6 +3261,9 @@ function formatMins(mins){
         if(mode==='quiz') pyaStartQuiz();
         if(mode==='puzzle') pyaStartPuzzle();
         if(mode==='bug') pyaStartBug();
+        if(mode==='tagmatch') pyaStartTagMatch();
+        if(mode==='stylesleuth') pyaStartSS();
+        if(mode==='buildlive') pyaStartBuild();
       });
     });
   }
@@ -3255,7 +3413,7 @@ function formatMins(mins){
         ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
         <div class="pya-btn-row">
           <button class="pya-btn-secondary" id="pyaQuizAgain">🔁 Play Again</button>
-          <button class="pya-btn-secondary" id="pyaQuizHub">🐍 Back to Arena</button>
+          <button class="pya-btn-secondary" id="pyaQuizHub">🕹️ Back to Arena</button>
         </div>
       </div>
     `;
@@ -3394,7 +3552,7 @@ function formatMins(mins){
         ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
         <div class="pya-btn-row">
           <button class="pya-btn-secondary" id="pyaPuzAgain">🔁 Play Again</button>
-          <button class="pya-btn-secondary" id="pyaPuzHub">🐍 Back to Arena</button>
+          <button class="pya-btn-secondary" id="pyaPuzHub">🕹️ Back to Arena</button>
         </div>
       </div>
     `;
@@ -3493,12 +3651,421 @@ function formatMins(mins){
         ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
         <div class="pya-btn-row">
           <button class="pya-btn-secondary" id="pyaBugAgain">🔁 Play Again</button>
-          <button class="pya-btn-secondary" id="pyaBugHub">🐍 Back to Arena</button>
+          <button class="pya-btn-secondary" id="pyaBugHub">🕹️ Back to Arena</button>
         </div>
       </div>
     `;
     document.getElementById('pyaBugAgain').addEventListener('click', pyaStartBug);
     document.getElementById('pyaBugHub').addEventListener('click', pyaGoHub);
+  }
+
+  /* ================= TAG MATCH RUSH (HTML) ================= */
+  function pyaStartTagMatch(){
+    pyaGame = 'tagmatch';
+    const pool = pyaShuffle(PYA_TAGMATCH).slice(0, 10);
+    pyaSession = {
+      questions: pool, idx:0, score:0, lives:3, streak:0, maxStreak:0,
+      timeLeft:10, roundTime:10, timerId:null, answered:false,
+    };
+    pyaEnterGameScreen();
+    pyaRenderTagRound();
+  }
+
+  function pyaClearTagTimer(){
+    if(pyaSession.timerId){ clearInterval(pyaSession.timerId); pyaSession.timerId = null; }
+  }
+
+  function pyaRenderTagRound(){
+    pyaClearTagTimer();
+    const s = pyaSession;
+    if(s.idx >= s.questions.length || s.lives<=0){ pyaEndTagMatch(); return; }
+    const q = s.questions[s.idx];
+    s.answered = false;
+    s.roundTime = Math.max(5, 10 - s.idx*0.4);
+    s.timeLeft = s.roundTime;
+
+    const gs = document.getElementById('pyaGameScreen');
+    const hearts = [0,1,2].map(i=>`<span class="pya-heart ${i<s.lives?'':'dead'}">❤️</span>`).join('');
+    const dots = s.questions.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaTagBack">← Arena</button>
+        <div class="pya-hearts">${hearts}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <div class="pya-timerbar-track"><div class="pya-timerbar-fill" id="pyaTagTimerFill" style="width:100%"></div></div>
+        <div class="pya-qtext">${pyaEsc(q.q)}</div>
+        <div id="pyaTagOptions"></div>
+        <div id="pyaTagExplainWrap"></div>
+      </div>
+    `;
+    document.getElementById('pyaTagBack').addEventListener('click', ()=>{ pyaClearTagTimer(); pyaGoHub(); });
+
+    const optsWrap = document.getElementById('pyaTagOptions');
+    q.o.forEach((opt, i)=>{
+      const b = document.createElement('button');
+      b.className = 'pya-option';
+      b.textContent = opt;
+      b.addEventListener('click', ()=>pyaAnswerTag(i));
+      optsWrap.appendChild(b);
+    });
+
+    s.timerId = setInterval(()=>{
+      s.timeLeft -= 0.1;
+      const fill = document.getElementById('pyaTagTimerFill');
+      if(fill){
+        const pct = Math.max(0, (s.timeLeft/s.roundTime)*100);
+        fill.style.width = pct+'%';
+        fill.classList.toggle('low', s.timeLeft < s.roundTime*0.3);
+      }
+      if(s.timeLeft <= 0){
+        pyaClearTagTimer();
+        pyaAnswerTag(-1); // timeout
+      }
+    }, 100);
+  }
+
+  function pyaAnswerTag(choiceIdx){
+    const s = pyaSession;
+    if(s.answered) return;
+    s.answered = true;
+    pyaClearTagTimer();
+    const q = s.questions[s.idx];
+    const correct = choiceIdx === q.a;
+    const options = document.querySelectorAll('#pyaTagOptions .pya-option');
+    options.forEach((btn,i)=>{
+      btn.disabled = true;
+      if(i===q.a) btn.classList.add('correct');
+      else if(i===choiceIdx) btn.classList.add('wrong');
+    });
+
+    if(correct){
+      pyaSoundCorrect();
+      s.streak += 1;
+      if(s.streak > s.maxStreak) s.maxStreak = s.streak;
+      const timeBonus = Math.max(0, Math.round(s.timeLeft) * 4);
+      const streakBonus = Math.min(s.streak,5) * 10;
+      const gained = 100 + timeBonus + streakBonus;
+      s.score += gained;
+      pyaShowTagExplain(q.e, `+${gained} pts  (streak x${s.streak})`, true);
+    } else {
+      pyaSoundWrong();
+      s.streak = 0;
+      s.lives -= 1;
+      pyaShowTagExplain(q.e, choiceIdx===-1 ? "Time's up!" : 'Not quite.', false);
+    }
+    if(s.maxStreak > pyaData.bestStreak){ pyaData.bestStreak = s.maxStreak; pyaSave(); }
+
+    setTimeout(()=>{ s.idx += 1; pyaRenderTagRound(); }, 1400);
+  }
+
+  function pyaShowTagExplain(text, tag, good){
+    const wrap = document.getElementById('pyaTagExplainWrap');
+    if(!wrap) return;
+    wrap.innerHTML = `<div class="pya-explain"><strong style="color:${good?'var(--pya-green)':'var(--pya-red)'}">${pyaEsc(tag)}</strong><br>${pyaEsc(text)}</div>`;
+  }
+
+  function pyaEndTagMatch(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('tagmatch', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">${s.lives<=0 ? '💥' : '🏁'}</div>
+        <h3 style="color:#fff; margin-top:8px;">${s.lives<=0 ? 'Out of Lives!' : 'Tag Match Complete!'}</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">Answered ${s.idx} of ${s.questions.length} · Best streak this run: ${s.maxStreak}</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaTagAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaTagHub">🕹️ Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaTagAgain').addEventListener('click', pyaStartTagMatch);
+    document.getElementById('pyaTagHub').addEventListener('click', pyaGoHub);
+  }
+
+  /* ================= STYLE SLEUTH (CSS) ================= */
+  function pyaSSBuildCss(item, cls, fixed){
+    const declLines = item.lines.map((l,i)=> i===item.bug ? (fixed?item.fix:l) : l).join('');
+    let css = `.${cls}{${item.base||''}${declLines}}`;
+    if(item.extraCss) css += item.extraCss.replace(/\{CLS\}/g, '.'+cls);
+    return css;
+  }
+
+  function pyaStartSS(){
+    pyaGame = 'stylesleuth';
+    const pool = pyaShuffle(PYA_CSS_BUGS);
+    pyaSession = { items: pool, idx:0, score:0, streak:0, maxStreak:0, answered:false };
+    pyaEnterGameScreen();
+    pyaRenderSS();
+  }
+
+  function pyaRenderSS(){
+    const s = pyaSession;
+    if(s.idx >= s.items.length){ pyaEndSS(); return; }
+    const item = s.items[s.idx];
+    s.answered = false;
+    const dots = s.items.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+    const cls = 'ss-demo-a';
+    const previewHtml = item.html.replace(/\{\{CLS\}\}/g, cls);
+    const previewCss = pyaSSBuildCss(item, cls, false);
+
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaSSBack">← Arena</button>
+        <div style="color:#fff; font-weight:700; font-size:13px;">${pyaEsc(item.title)}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <p style="color:var(--pya-ink-dim); font-size:12.5px; margin:0 0 12px;">Click the CSS line hiding the bug — watch how it's rendering right now.</p>
+        <style>${previewCss}</style>
+        <div class="pya-ss-preview">
+          <div class="pya-ss-preview-label">Current render</div>
+          <div class="pya-ss-stage">${previewHtml}</div>
+        </div>
+        <div class="pya-ss-rule"><span class="pya-ss-selector">.demo {</span></div>
+        <div id="pyaSSLines"></div>
+        <div class="pya-ss-rule"><span class="pya-ss-selector">}</span></div>
+        <div id="pyaSSExplain"></div>
+        <div class="pya-btn-row" id="pyaSSNextWrap" style="display:none;">
+          <button class="pya-btn-secondary" id="pyaSSNext">Next →</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaSSBack').addEventListener('click', pyaGoHub);
+
+    const wrap = document.getElementById('pyaSSLines');
+    item.lines.forEach((line, i)=>{
+      const row = document.createElement('div');
+      row.className = 'pya-code-line clickable';
+      row.innerHTML = `<span class="pya-lineno">${i+1}</span><span class="pya-linetext">${pyaEsc(line)}</span>`;
+      row.addEventListener('click', ()=>pyaAnswerSS(i));
+      wrap.appendChild(row);
+    });
+  }
+
+  function pyaAnswerSS(pickIdx){
+    const s = pyaSession;
+    if(s.answered) return;
+    s.answered = true;
+    const item = s.items[s.idx];
+    const correct = pickIdx === item.bug;
+
+    const rows = document.querySelectorAll('#pyaSSLines .pya-code-line');
+    rows.forEach((row,i)=>{
+      row.classList.remove('clickable');
+      if(i===item.bug) row.classList.add('pick-correct');
+      else if(i===pickIdx) row.classList.add('pick-wrong');
+      else row.classList.add('dim');
+    });
+
+    let gained = 0;
+    if(correct){
+      pyaSoundCorrect();
+      s.streak += 1;
+      if(s.streak > s.maxStreak) s.maxStreak = s.streak;
+      gained = 100 + Math.min(s.streak,5)*10;
+      s.score += gained;
+    } else {
+      pyaSoundWrong();
+      s.streak = 0;
+    }
+    if(s.maxStreak > pyaData.bestStreak){ pyaData.bestStreak = s.maxStreak; pyaSave(); }
+
+    const clsFix = 'ss-demo-b';
+    const fixHtml = item.html.replace(/\{\{CLS\}\}/g, clsFix);
+    const fixCss = pyaSSBuildCss(item, clsFix, true);
+    const buggyHtml = item.html.replace(/\{\{CLS\}\}/g, 'ss-demo-a');
+
+    document.getElementById('pyaSSExplain').innerHTML = `
+      <div class="pya-explain"><strong style="color:${correct?'var(--pya-green)':'var(--pya-red)'}">${correct ? '🎯 Found it! +'+gained+' pts' : "Not quite — here's the real bug:"}</strong><br>${pyaEsc(item.e)}</div>
+      <style>${fixCss}</style>
+      <div class="pya-ss-compare">
+        <div><div class="pya-ss-preview-label">❌ Buggy</div><div class="pya-ss-stage small">${buggyHtml}</div></div>
+        <div><div class="pya-ss-preview-label">✅ Fixed</div><div class="pya-ss-stage small">${fixHtml}</div></div>
+      </div>
+    `;
+    document.getElementById('pyaSSNextWrap').style.display = 'flex';
+    document.getElementById('pyaSSNext').addEventListener('click', ()=>{ s.idx += 1; pyaRenderSS(); });
+  }
+
+  function pyaEndSS(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('stylesleuth', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">🔍</div>
+        <h3 style="color:#fff; margin-top:8px;">Style Sleuth Complete!</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">Best streak this run: ${s.maxStreak} of ${s.items.length}</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaSSAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaSSHub">🕹️ Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaSSAgain').addEventListener('click', pyaStartSS);
+    document.getElementById('pyaSSHub').addEventListener('click', pyaGoHub);
+  }
+
+  /* ================= BUILD IT LIVE (HTML + CSS combo) ================= */
+  function pyaStartBuild(){
+    pyaGame = 'buildlive';
+    pyaSession = { puzzles: PYA_BUILDS, idx:0, score:0, perfectCount:0, order:[] };
+    pyaEnterGameScreen();
+    pyaLoadBuild();
+  }
+
+  function pyaLoadBuild(){
+    const s = pyaSession;
+    if(s.idx >= s.puzzles.length){ pyaEndBuildSession(); return; }
+    const puzzle = s.puzzles[s.idx];
+    let shuffled;
+    do { shuffled = pyaShuffle(puzzle.lines.map((line,i)=>({line, correctIdx:i}))); }
+    while(puzzle.lines.length > 2 && shuffled.every((item,i)=>item.correctIdx===i));
+    s.order = shuffled;
+    s.checked = false;
+    pyaRenderBuild();
+  }
+
+  function pyaRenderBuild(){
+    const s = pyaSession;
+    const puzzle = s.puzzles[s.idx];
+    const dots = s.puzzles.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaBuildBack">← Arena</button>
+        <div style="color:#fff; font-weight:700; font-size:13px;">${pyaEsc(puzzle.title)}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <p style="color:var(--pya-ink-dim); font-size:12.5px; margin:0 0 12px;">Drag or reorder the lines — the preview updates live as you go.</p>
+        <div class="pya-ss-preview">
+          <div class="pya-ss-preview-label">Live preview</div>
+          <div class="pya-build-stage" id="pyaBuildStage"></div>
+        </div>
+        <div id="pyaBuildLines"></div>
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaBuildCheck">✅ Check Order</button>
+          <button class="pya-btn-secondary" id="pyaBuildNext" style="display:none;">Next Build →</button>
+        </div>
+        <div id="pyaBuildExplain"></div>
+      </div>
+    `;
+    document.getElementById('pyaBuildBack').addEventListener('click', pyaGoHub);
+    document.getElementById('pyaBuildCheck').addEventListener('click', pyaCheckBuild);
+    pyaRenderBuildLines();
+  }
+
+  let pyaBuildDragFromIdx = null;
+  function pyaRenderBuildLines(){
+    const s = pyaSession;
+    const wrap = document.getElementById('pyaBuildLines');
+    wrap.innerHTML = '';
+    s.order.forEach((item, i)=>{
+      const row = document.createElement('div');
+      row.className = 'pya-code-line';
+      row.draggable = !s.checked;
+      row.dataset.idx = i;
+      row.innerHTML = `
+        <span class="pya-lineno">${i+1}</span>
+        <span class="pya-linetext">${pyaEsc(item.line)}</span>
+        <div class="pya-line-btns">
+          <button class="pya-line-btn" data-dir="up" ${i===0?'disabled':''}>▲</button>
+          <button class="pya-line-btn" data-dir="down" ${i===s.order.length-1?'disabled':''}>▼</button>
+        </div>
+      `;
+      if(!s.checked){
+        row.addEventListener('dragstart', ()=>{ pyaBuildDragFromIdx = i; row.classList.add('dragging'); });
+        row.addEventListener('dragend', ()=>{ row.classList.remove('dragging'); });
+        row.addEventListener('dragover', (e)=>e.preventDefault());
+        row.addEventListener('drop', (e)=>{
+          e.preventDefault();
+          if(pyaBuildDragFromIdx===null || pyaBuildDragFromIdx===i) return;
+          const moved = s.order.splice(pyaBuildDragFromIdx,1)[0];
+          s.order.splice(i,0,moved);
+          pyaBuildDragFromIdx = null;
+          pyaRenderBuildLines();
+        });
+        row.querySelectorAll('.pya-line-btn').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            const dir = btn.dataset.dir;
+            const from = i, to = dir==='up' ? i-1 : i+1;
+            if(to<0 || to>=s.order.length) return;
+            [s.order[from], s.order[to]] = [s.order[to], s.order[from]];
+            pyaRenderBuildLines();
+          });
+        });
+      }
+      wrap.appendChild(row);
+    });
+    pyaRenderBuildPreview();
+  }
+
+  function pyaRenderBuildPreview(){
+    const s = pyaSession;
+    const stage = document.getElementById('pyaBuildStage');
+    if(!stage) return;
+    stage.innerHTML = s.order.map(item=>item.line).join('\n');
+  }
+
+  function pyaCheckBuild(){
+    const s = pyaSession;
+    if(s.checked) return;
+    s.checked = true;
+    let correctCount = 0;
+    s.order.forEach((item,i)=>{ if(item.correctIdx===i) correctCount++; });
+    const total = s.order.length;
+    const fullyCorrect = correctCount===total;
+
+    const rows = document.querySelectorAll('#pyaBuildLines .pya-code-line');
+    rows.forEach((row,i)=>{
+      row.classList.add(s.order[i].correctIdx===i ? 'pick-correct' : 'pick-wrong');
+      row.draggable = false;
+      row.querySelectorAll('.pya-line-btn').forEach(b=>b.disabled=true);
+    });
+
+    const gained = Math.round((correctCount/total)*80) + (fullyCorrect?40:0);
+    s.score += gained;
+    if(fullyCorrect) s.perfectCount += 1;
+    fullyCorrect ? pyaSoundCorrect() : pyaSoundWrong();
+
+    document.getElementById('pyaBuildExplain').innerHTML = `<div class="pya-explain"><strong style="color:${fullyCorrect?'var(--pya-green)':'var(--pya-yellow)'}">${fullyCorrect ? '🎉 Perfect build!' : correctCount+' of '+total+' lines already in the right spot.'}</strong> +${gained} pts</div>`;
+    document.getElementById('pyaBuildCheck').style.display = 'none';
+    document.getElementById('pyaBuildNext').style.display = 'inline-block';
+    document.getElementById('pyaBuildNext').addEventListener('click', ()=>{ s.idx += 1; pyaLoadBuild(); });
+  }
+
+  function pyaEndBuildSession(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('buildlive', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">🛠️</div>
+        <h3 style="color:#fff; margin-top:8px;">Build Session Complete!</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">${s.perfectCount} of ${s.puzzles.length} built perfectly</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaBuildAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaBuildHub">🕹️ Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaBuildAgain').addEventListener('click', pyaStartBuild);
+    document.getElementById('pyaBuildHub').addEventListener('click', pyaGoHub);
   }
 
   window.renderPythonArena = renderPythonArena;
