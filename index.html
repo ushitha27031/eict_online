@@ -573,6 +573,149 @@
       animation:none !important;
     }
   }
+
+  /* =====================================================================
+     PYTHON ARENA — standalone arcade mini-games
+     Retro terminal-cabinet theme: deep indigo cabinet, neon green/cyan/pink/
+     yellow accents, JetBrains Mono "LED" readouts. Deliberately louder than
+     the rest of the dashboard — this is the one place built to feel like a
+     game, not a study tool.
+     ===================================================================== */
+  :root{
+    --pya-bg-deep:#150E2E;
+    --pya-bg-panel:#241748;
+    --pya-bg-panel2:#1B1140;
+    --pya-green:#39FF88;
+    --pya-pink:#FF3E9A;
+    --pya-cyan:#34E4EA;
+    --pya-yellow:#FFD93D;
+    --pya-red:#FF4757;
+    --pya-ink-dim:#9aa3c7;
+  }
+  .pya-wrap{
+    position:relative; overflow:hidden;
+    background:var(--pya-bg-deep); border-radius:22px; padding:22px;
+    border:2px solid rgba(57,255,136,0.22);
+    box-shadow:0 0 0 6px #0b0720, 0 20px 50px rgba(5,0,20,0.45);
+  }
+  .pya-grid-bg{
+    position:absolute; inset:0; opacity:.13; pointer-events:none;
+    background-image:linear-gradient(var(--pya-green) 1px, transparent 1px), linear-gradient(90deg, var(--pya-green) 1px, transparent 1px);
+    background-size:28px 28px;
+  }
+  .pya-scanlines{
+    position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:repeating-linear-gradient(rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 3px);
+  }
+  .pya-mute-btn{
+    position:absolute; top:14px; right:14px; z-index:6;
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff;
+    width:34px; height:34px; border-radius:50%; font-size:14px; cursor:pointer;
+  }
+  .pya-mute-btn:hover{background:rgba(255,255,255,0.16);}
+  .pya-marquee{
+    position:relative; z-index:2; overflow:hidden; white-space:nowrap;
+    background:#0b0720; border:1px solid rgba(57,255,136,0.3); border-radius:10px;
+    padding:8px 0; margin-bottom:16px;
+  }
+  .pya-marquee-track{
+    display:inline-block; padding-left:100%; font-family:'JetBrains Mono'; font-size:12.5px; font-weight:700;
+    color:var(--pya-green); letter-spacing:.04em; text-shadow:0 0 8px rgba(57,255,136,0.6);
+    animation:pyaMarquee 16s linear infinite;
+  }
+  @keyframes pyaMarquee{ from{transform:translateX(0);} to{transform:translateX(-100%);} }
+  .pya-stats-row{position:relative; z-index:2; display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;}
+  .pya-stat-chip{
+    flex:1; min-width:110px; text-align:center; background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 12px;
+  }
+  .pya-stat-chip .n{font-family:'JetBrains Mono'; font-weight:800; font-size:19px; color:var(--pya-yellow); text-shadow:0 0 8px rgba(255,217,61,0.45);}
+  .pya-stat-chip .l{font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--pya-ink-dim); margin-top:3px;}
+  .pya-cabinets{position:relative; z-index:2; display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  @media(max-width:900px){ .pya-cabinets{grid-template-columns:1fr;} }
+  .pya-cabinet{
+    background:linear-gradient(160deg, var(--pya-bg-panel), var(--pya-bg-panel2));
+    border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px 16px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+  }
+  .pya-cabinet .glow-icon{font-size:38px; filter:drop-shadow(0 0 10px currentColor);}
+  .pya-cabinet.c-cyan .glow-icon{color:var(--pya-cyan);}
+  .pya-cabinet.c-pink .glow-icon{color:var(--pya-pink);}
+  .pya-cabinet.c-yellow .glow-icon{color:var(--pya-yellow);}
+  .pya-cabinet h4{font-family:'Space Grotesk'; color:#fff; font-size:16px; margin:2px 0 0;}
+  .pya-cabinet p{font-size:12px; color:var(--pya-ink-dim); line-height:1.5; margin:0;}
+  .pya-cabinet .best{font-family:'JetBrains Mono'; font-size:11.5px; color:var(--pya-green);}
+  .pya-btn-play{
+    border:none; border-radius:10px; padding:11px 22px; font-weight:800; font-size:13.5px; cursor:pointer;
+    margin-top:6px; color:#04210f; background:linear-gradient(135deg, var(--pya-green), #1fbf67);
+    box-shadow:0 0 16px rgba(57,255,136,0.5); animation:pyaPulse 2.4s ease-in-out infinite;
+  }
+  .pya-cabinet.c-cyan .pya-btn-play{color:#04262b; background:linear-gradient(135deg, var(--pya-cyan), #1aa8ad); box-shadow:0 0 16px rgba(52,228,234,0.5);}
+  .pya-cabinet.c-pink .pya-btn-play{color:#3a0620; background:linear-gradient(135deg, var(--pya-pink), #c72172); box-shadow:0 0 16px rgba(255,62,154,0.5);}
+  .pya-cabinet.c-yellow .pya-btn-play{color:#3a2c02; background:linear-gradient(135deg, var(--pya-yellow), #e0b400); box-shadow:0 0 16px rgba(255,217,61,0.5);}
+  @keyframes pyaPulse{ 0%,100%{transform:scale(1);} 50%{transform:scale(1.045);} }
+  .pya-game-screen{position:relative; z-index:2;}
+  .pya-game-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; flex-wrap:wrap;}
+  .pya-back-btn{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.14); color:#fff; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer;}
+  .pya-back-btn:hover{background:rgba(255,255,255,0.16);}
+  .pya-hearts{display:flex; gap:4px;}
+  .pya-heart{font-size:17px; filter:drop-shadow(0 0 4px var(--pya-red));}
+  .pya-heart.dead{opacity:.2; filter:none;}
+  .pya-live-score{font-family:'JetBrains Mono'; font-weight:800; color:var(--pya-yellow); font-size:15px;}
+  .pya-panel{
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:14px; padding:18px;
+  }
+  .pya-timerbar-track{height:8px; border-radius:6px; background:rgba(255,255,255,0.08); overflow:hidden; margin-bottom:16px;}
+  .pya-timerbar-fill{height:100%; border-radius:6px; background:linear-gradient(90deg, var(--pya-green), var(--pya-yellow)); transition:width .1s linear;}
+  .pya-timerbar-fill.low{background:linear-gradient(90deg, var(--pya-red), #ff8a3d);}
+  .pya-qtext{font-family:'JetBrains Mono'; color:#fff; font-size:14.5px; line-height:1.7; margin-bottom:16px; white-space:pre-wrap;}
+  .pya-option{
+    display:block; width:100%; text-align:left; background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1);
+    color:#fff; padding:13px 16px; border-radius:12px; margin-bottom:9px; font-size:13.5px; font-family:'JetBrains Mono';
+    cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .pya-option:hover:not(:disabled){border-color:var(--pya-cyan); background:rgba(52,228,234,0.1);}
+  .pya-option:disabled{cursor:default;}
+  .pya-option.correct{border-color:var(--pya-green); background:rgba(57,255,136,0.18); animation:pyaCorrectPop .3s;}
+  .pya-option.wrong{border-color:var(--pya-red); background:rgba(255,71,87,0.18); animation:pyaShake .3s;}
+  @keyframes pyaShake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  @keyframes pyaCorrectPop{ 0%{transform:scale(1);} 50%{transform:scale(1.03);} 100%{transform:scale(1);} }
+  .pya-explain{font-size:12px; color:var(--pya-ink-dim); background:rgba(255,255,255,0.05); border-radius:10px; padding:10px 12px; margin-top:6px; line-height:1.6;}
+  .pya-combo-pop{
+    position:absolute; right:18px; top:60px; font-family:'JetBrains Mono'; font-weight:800; color:var(--pya-yellow);
+    font-size:13px; background:rgba(0,0,0,0.4); padding:5px 10px; border-radius:8px; animation:pyaComboFade 1s ease forwards;
+  }
+  @keyframes pyaComboFade{ 0%{opacity:0; transform:translateY(6px);} 20%{opacity:1; transform:translateY(0);} 80%{opacity:1;} 100%{opacity:0; transform:translateY(-8px);} }
+  .pya-code-line{
+    font-family:'JetBrains Mono'; background:#0d0821; color:#c9f7d9; padding:9px 12px; border-radius:8px;
+    margin-bottom:6px; font-size:12.8px; display:flex; align-items:center; gap:10px; border:1.5px solid rgba(255,255,255,0.07);
+  }
+  .pya-code-line .pya-lineno{color:#5b6b8c; min-width:18px; text-align:right; user-select:none; flex-shrink:0;}
+  .pya-code-line .pya-linetext{flex:1; white-space:pre;}
+  .pya-code-line.clickable{cursor:pointer;}
+  .pya-code-line.clickable:hover{border-color:var(--pya-cyan);}
+  .pya-code-line.pick-correct{border-color:var(--pya-green); background:rgba(57,255,136,0.14);}
+  .pya-code-line.pick-wrong{border-color:var(--pya-red); background:rgba(255,71,87,0.14);}
+  .pya-code-line.dim{opacity:.45;}
+  .pya-line-btns{display:flex; flex-direction:column; gap:2px; flex-shrink:0;}
+  .pya-line-btn{background:rgba(255,255,255,0.1); border:none; color:#fff; border-radius:5px; width:20px; height:16px; font-size:9px; cursor:pointer; line-height:1;}
+  .pya-line-btn:hover{background:rgba(255,255,255,0.22);}
+  .pya-line-btn:disabled{opacity:.25; cursor:default;}
+  .pya-progress-dots{display:flex; gap:6px; justify-content:center; margin:4px 0 16px;}
+  .pya-progress-dots span{width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.15); display:inline-block;}
+  .pya-progress-dots span.done{background:var(--pya-green);}
+  .pya-progress-dots span.current{background:var(--pya-cyan); box-shadow:0 0 6px var(--pya-cyan);}
+  .pya-result-card{text-align:center; padding:26px 16px;}
+  .pya-led-score{font-family:'JetBrains Mono'; font-size:38px; font-weight:800; color:var(--pya-yellow); text-shadow:0 0 12px rgba(255,217,61,0.7); letter-spacing:1px;}
+  .pya-level-chip{display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.08); padding:7px 16px; border-radius:20px; font-weight:700; font-size:13px; color:#fff; margin-top:10px;}
+  .pya-btn-row{display:flex; gap:10px; justify-content:center; margin-top:18px; flex-wrap:wrap;}
+  .pya-btn-secondary{background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); color:#fff; padding:11px 20px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer;}
+  .pya-btn-secondary:hover{background:rgba(255,255,255,0.16);}
+  .pya-confetti-piece{position:fixed; top:-10px; width:8px; height:14px; border-radius:2px; z-index:9999; pointer-events:none; animation:pyaFall linear forwards;}
+  @keyframes pyaFall{ to{ transform:translateY(110vh) rotate(720deg); opacity:.25; } }
+  @media (prefers-reduced-motion: reduce){
+    .pya-marquee-track, .pya-btn-play, .pya-option.correct, .pya-option.wrong, .pya-combo-pop, .pya-confetti-piece{ animation:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -670,6 +813,7 @@
         <button data-view="stats"><span class="ic">📊</span> Mission Stats</button>
         <button data-view="hof"><span class="ic">👑</span> Hall of Fame</button>
         <button data-view="planner"><span class="ic">📅</span> Study Planner</button>
+        <button data-view="pygame"><span class="ic">🐍</span> Python Arena</button>
       </nav>
       <div class="sidebar-foot">
         <div class="agent-mini">
@@ -977,6 +1121,31 @@
         </div>
 
         <div id="plannerResultWrap"></div>
+      </section>
+
+      <!-- ---------- PYTHON ARENA (standalone arcade mini-games) ---------- -->
+      <section class="view" id="view-pygame">
+        <div class="topbar">
+          <div>
+            <h2>🐍 Python Arena</h2>
+            <div class="sub">Three arcade challenges to sharpen your Python. This is just for fun & practice — scores live on this device only, separate from your mission coins.</div>
+          </div>
+        </div>
+
+        <div class="pya-wrap" id="pyaWrap">
+          <div class="pya-grid-bg"></div>
+          <div class="pya-scanlines"></div>
+          <button class="pya-mute-btn" id="pyaMuteBtn" title="Toggle sound">🔊</button>
+
+          <div class="pya-marquee"><div class="pya-marquee-track" id="pyaMarqueeTrack">LOADING…</div></div>
+          <div class="pya-stats-row" id="pyaStatsRow"></div>
+
+          <div id="pyaHub">
+            <div class="pya-cabinets" id="pyaCabinets"></div>
+          </div>
+
+          <div class="pya-game-screen" id="pyaGameScreen" style="display:none;"></div>
+        </div>
       </section>
 
     </main>
@@ -1575,6 +1744,7 @@ function renderView(name){
   if(name==='stats') renderStats();
   if(name==='hof') renderHallOfFame();
   if(name==='planner') renderPlannerView();
+  if(name==='pygame') renderPythonArena();
 }
 
 function renderShell(){
@@ -2693,6 +2863,648 @@ function formatMins(mins){
   if(m===0) return `${h}h`;
   return `${h}h ${m}m`;
 }
+
+/* =====================================================================
+   PYTHON ARENA — standalone arcade mini-games (own scoring, localStorage)
+   Three modes: Quiz Battle, Code Order Puzzle, Bug Hunter.
+   Entirely self-contained: does not touch the mission/coin/profile system.
+   ===================================================================== */
+(function(){
+
+  const PYA_LS_KEY = 'pyArenaData_v1';
+
+  function pyaLoad(){
+    try{
+      const raw = localStorage.getItem(PYA_LS_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        return Object.assign({ totalPoints:0, gamesPlayed:0, muted:false, best:{quiz:0,puzzle:0,bug:0}, bestStreak:0 }, parsed);
+      }
+    }catch(e){}
+    return { totalPoints:0, gamesPlayed:0, muted:false, best:{quiz:0,puzzle:0,bug:0}, bestStreak:0 };
+  }
+  let pyaData = pyaLoad();
+  function pyaSave(){ try{ localStorage.setItem(PYA_LS_KEY, JSON.stringify(pyaData)); }catch(e){} }
+
+  const PYA_LEVELS = [
+    {min:0,    name:'Code Hatchling',  icon:'🥚'},
+    {min:300,  name:'Garden Snake',    icon:'🐍'},
+    {min:800,  name:'Script Viper',    icon:'⚡'},
+    {min:1500, name:'Cobra Coder',     icon:'🔥'},
+    {min:2500, name:'Python Charmer',  icon:'🎩'},
+    {min:4000, name:'Python Master',   icon:'👑'},
+  ];
+  function pyaLevelFor(points){
+    let cur = PYA_LEVELS[0];
+    for(const l of PYA_LEVELS){ if(points>=l.min) cur=l; }
+    return cur;
+  }
+  function pyaNextLevel(points){
+    for(const l of PYA_LEVELS){ if(points<l.min) return l; }
+    return null;
+  }
+
+  /* ---------------- SOUND (tiny synthesized beeps, muteable) ---------------- */
+  let pyaAudioCtx = null;
+  function pyaBeep(freqStart, freqEnd, dur, type){
+    if(pyaData.muted) return;
+    try{
+      if(!pyaAudioCtx) pyaAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const ctx = pyaAudioCtx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freqStart, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(freqEnd,1), ctx.currentTime+dur);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime+dur);
+    }catch(e){}
+  }
+  function pyaSoundCorrect(){ pyaBeep(660,880,0.15,'triangle'); }
+  function pyaSoundWrong(){ pyaBeep(220,110,0.25,'sawtooth'); }
+  function pyaSoundLevelUp(){ pyaBeep(440,1200,0.4,'square'); }
+  function pyaSoundClick(){ pyaBeep(500,500,0.05,'square'); }
+
+  /* ---------------- CONFETTI ---------------- */
+  function pyaConfetti(){
+    const colors = ['#39FF88','#FF3E9A','#34E4EA','#FFD93D','#ffffff'];
+    for(let i=0;i<28;i++){
+      const p = document.createElement('div');
+      p.className = 'pya-confetti-piece';
+      p.style.left = (Math.random()*100)+'vw';
+      p.style.background = colors[Math.floor(Math.random()*colors.length)];
+      p.style.animationDuration = (2+Math.random()*1.5)+'s';
+      p.style.transform = 'rotate('+(Math.random()*360)+'deg)';
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(), 3600);
+    }
+  }
+
+  function pyaShuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]] = [a[j],a[i]];
+    }
+    return a;
+  }
+  function pyaEsc(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* ---------------- QUESTION BANKS ---------------- */
+  const PYA_QUIZ = [
+    {q:'What is the data type of 3.14 in Python?', o:['int','float','str','bool'], a:1, e:"Numbers written with a decimal point are Python's float type."},
+    {q:'Which symbol is used for exponentiation (power) in Python?', o:['^','**','%%','//'], a:1, e:'** raises a number to a power, e.g. 2**3 gives 8.'},
+    {q:'What does the // operator do?', o:['Regular division','Floor division (rounds down)','Modulus (remainder)','Exponent'], a:1, e:'// divides then rounds down to the nearest whole number.'},
+    {q:'What is the output of: print(10 % 3)', o:['3','1','3.33','0'], a:1, e:'% gives the remainder after division — 10 ÷ 3 leaves a remainder of 1.'},
+    {q:'Which of these is a mutable data type?', o:['tuple','string','list','int'], a:2, e:'Lists can be changed after creation; tuples, strings and ints cannot.'},
+    {q:'What does len("Python") return?', o:['5','6','7','Error'], a:1, e:'"Python" has 6 characters: P-y-t-h-o-n.'},
+    {q:"What is the index of the first character in a Python string?", o:['1','0','-1','Depends on the string'], a:1, e:'Python uses zero-based indexing — counting starts at 0.'},
+    {q:'What will "Hello"[-1] return?', o:['H','o','e','Error'], a:1, e:'Negative indexing counts from the end — -1 is the last character.'},
+    {q:'Which keyword defines a function in Python?', o:['func','def','function','lambda'], a:1, e:"'def' begins every regular function definition."},
+    {q:'What is the correct way to write a comment in Python?', o:['// comment','/* comment */','# comment','<!-- comment -->'], a:2, e:'Python comments start with a # symbol.'},
+    {q:'What does this print?\nx = 5\nx += 3\nprint(x)', o:['5','8','53','Error'], a:1, e:'x += 3 means x = x + 3, so 5 becomes 8.'},
+    {q:'Which of these correctly checks if two values are equal?', o:['x = y','x == y','x eq y','x.equals(y)'], a:1, e:'A single = assigns a value; == compares two values.'},
+    {q:'What is the output of: print(type(5))', o:["<class 'int'>","<class 'float'>",'int','number'], a:0, e:"type() reports the full class name, so an integer shows as <class 'int'>."},
+    {q:'What does range(5) generate?', o:['1,2,3,4,5','0,1,2,3,4','0,1,2,3,4,5','5,4,3,2,1'], a:1, e:'range(5) starts at 0 and stops before 5, giving 5 values.'},
+    {q:'How many times does this loop run?\nfor i in range(2, 10, 2):\n    print(i)', o:['4','5','8','10'], a:0, e:'It produces 2, 4, 6, 8 — four values, stepping by 2 and stopping before 10.'},
+    {q:"Which loop is best when you don't know in advance how many times to repeat?", o:['for loop','while loop','range loop','do-while loop'], a:1, e:"A while loop keeps going until its condition becomes false, so it doesn't need a known count."},
+    {q:"What does 'break' do inside a loop?", o:['Skips the current iteration only','Ends the loop immediately','Restarts the loop from zero','Pauses the loop'], a:1, e:'break exits the loop completely, right away.'},
+    {q:"What does 'continue' do inside a loop?", o:['Ends the loop','Skips to the next iteration','Restarts the whole program','Does nothing'], a:1, e:'continue skips the rest of the current pass and jumps to the next one.'},
+    {q:'What is the output?\nfor i in range(3):\n    if i == 1:\n        continue\n    print(i)', o:['0 1 2','0 2','1','0 1'], a:1, e:'When i is 1, continue skips the print, so only 0 and 2 are printed.'},
+    {q:'Which data structure stores key-value pairs?', o:['list','tuple','dictionary','set'], a:2, e:'A dictionary maps keys to values, e.g. {"name": "Amara"}.'},
+    {q:'How do you access the value for key "name" in dictionary d?', o:['d("name")','d["name"]','d->name','d.name()'], a:1, e:'Square brackets with the key retrieve its value from a dictionary.'},
+    {q:'What does a Python set NOT allow?', o:['Mixed types','Duplicate values','Empty sets','Iteration'], a:1, e:'A set automatically drops duplicates — every value in it is unique.'},
+    {q:'What is the output of: print(bool(0))', o:['True','False','0','Error'], a:1, e:'0 is treated as False in a boolean context; any non-zero number is True.'},
+    {q:'What is the output of: print("3" + "4")', o:['7',"'34'",'34','Error'], a:1, e:"Adding two strings joins them together (concatenation), giving '34', not 7."},
+    {q:'What error occurs from: print("Age: " + 25)', o:['SyntaxError','TypeError','ValueError','NameError'], a:1, e:"You can't directly join a string and an integer with + — convert first with str(25)."},
+    {q:'Which function converts the text "25" into a whole number?', o:['str()','float()','int()','bool()'], a:2, e:'int() converts a valid numeric string into an integer.'},
+    {q:'What does this return when called as add(2, 3)?\ndef add(a, b):\n    return a + b', o:['5',"'23'",'None','Error'], a:0, e:'The function adds its two arguments and returns 5.'},
+    {q:'What does a function return by default if it has no return statement?', o:['0','""','None','False'], a:2, e:'Without an explicit return, a Python function returns None.'},
+    {q:'def greet(name="Student"): — what happens if greet() is called with no arguments?', o:['It raises an error','name becomes "Student"','name becomes None','Nothing happens at all'], a:1, e:'A default value is used automatically whenever the argument is left out.'},
+    {q:'What is recursion?', o:['A loop that never ends','A function that calls itself','A special type of variable','A kind of error'], a:1, e:'Recursion is when a function calls itself to solve a smaller version of the same problem.'},
+    {q:'Which block contains code that might raise an error?', o:['try','except','finally','raise'], a:0, e:"Risky code goes inside 'try'; if it fails, control passes to 'except'."},
+    {q:"What does 'except' do?", o:['Runs code that might fail','Catches and handles an error','Always runs no matter what','Stops the whole program instantly'], a:1, e:'except defines how to respond when a specific error occurs in the try block.'},
+    {q:'What keyword defines a class in Python?', o:['class','object','def','struct'], a:0, e:"'class' is used to define a new object blueprint."},
+    {q:"What does 'self' refer to inside a class method?", o:['The class itself','The current instance of the object','A global variable','Nothing — it is optional'], a:1, e:"'self' represents the specific object the method is being called on."},
+    {q:"Which special method sets up a new object's attributes?", o:['__start__','__init__','__new__','__create__'], a:1, e:'__init__ runs automatically when a new object is created.'},
+    {q:"What does 'import math' allow you to do?", o:['Create new variables','Use built-in mathematical functions','Delete functions','Nothing without installing something first'], a:1, e:"The built-in math module provides functions like sqrt() and pi without installing anything."},
+    {q:'What is the output of: print([1, 2, 3][1:])', o:['[1]','[2, 3]','[1, 2]','[3]'], a:1, e:'Slicing [1:] takes every item from index 1 to the end.'},
+    {q:'What does sorted([3, 1, 2]) return?', o:['[3, 1, 2]','[1, 2, 3]','[2, 1, 3]','Error'], a:1, e:'sorted() returns a new list arranged from smallest to largest by default.'},
+    {q:'What is the output of: print(2 == 2.0)', o:['True','False','Error','None'], a:0, e:'== compares values, and Python treats the int 2 and float 2.0 as equal.'},
+    {q:'A variable created inside a function is called what kind of variable?', o:['Global','Local','Constant','Public'], a:1, e:"It's local — it only exists while that function is running."},
+  ];
+
+  /* ---------------- CODE-ORDER PUZZLES (easy -> hard) ---------------- */
+  const PYA_PUZZLES = [
+    { title:'Reverse a String', lines:['text = "python"','reversed_text = text[::-1]','print(reversed_text)'] },
+    { title:'Square a Number', lines:['def square(x):','    return x * x','result = square(5)','print(result)'] },
+    { title:'Sum a List', lines:['numbers = [4, 8, 15, 16, 23]','total = 0','for num in numbers:','    total += num','print(total)'] },
+    { title:'Countdown', lines:['n = 5','while n > 0:','    print(n)','    n -= 1','print("Liftoff!")'] },
+    { title:'Find the Biggest Number', lines:['numbers = [3, 7, 2, 9, 4]','biggest = numbers[0]','for num in numbers:','    if num > biggest:','        biggest = num','print(biggest)'] },
+    { title:'A Simple Class', lines:['class Student:','    def __init__(self, name):','        self.name = name','    def greet(self):','        print("Hi, I\'m " + self.name)','s = Student("Ravi")','s.greet()'] },
+    { title:'Handle a Bad Input', lines:['try:','    number = int(input("Enter a number: "))','    print(100 / number)','except ZeroDivisionError:','    print("Cannot divide by zero!")','except ValueError:','    print("That\'s not a number!")'] },
+    { title:'FizzBuzz (one number)', lines:['number = 15','if number % 15 == 0:','    print("FizzBuzz")','elif number % 3 == 0:','    print("Fizz")','elif number % 5 == 0:','    print("Buzz")','else:','    print(number)'] },
+  ];
+
+  /* ---------------- BUG HUNTS ---------------- */
+  const PYA_BUGS = [
+    { title:'Missing Colon', code:['if x > 10','    print("big")'], bug:0, e:'Every if statement needs a colon at the end — it should read "if x > 10:".' },
+    { title:'Assignment vs Comparison', code:['if x = 5:','    print("five")'], bug:0, e:'A single = assigns a value. Comparing needs double equals: "if x == 5:".' },
+    { title:'Missing Indentation', code:['def greet():','print("Hello")'], bug:1, e:"Code inside a function must be indented — Python uses indentation to mark blocks, not braces." },
+    { title:'Off-by-One Range', code:['for i in range(1, 5):','    print(i)','# wanted: 1 2 3 4 5'], bug:0, e:'range(1, 5) stops before 5, so 5 never prints. It should be range(1, 6).' },
+    { title:'Index Out of Range', code:['fruits = ["apple", "banana", "cherry"]','print(fruits[3])'], bug:1, e:'The list only has indices 0, 1, 2. Index 3 does not exist — the last item is fruits[2].' },
+    { title:'Mismatched Quotes', code:['message = "Hello, World!\'','print(message)'], bug:0, e:'The string opens with a double quote but closes with a single quote — quotes must match.' },
+    { title:'Forgot to Call the Function', code:['def add(a, b):','    return a + b','result = add','print(result)'], bug:2, e:"Without parentheses, 'add' refers to the function itself, not its result. It should be add(2, 3)." },
+    { title:'Wrong Variable in Loop', code:['total = 0','for i in range(5):','    total += 1','print(total)'], bug:2, e:"This adds 1 each time instead of adding i, so it just counts iterations. It should be 'total += i'." },
+    { title:'Unclosed Bracket', code:['numbers = [1, 2, 3','print(numbers)'], bug:0, e:'The list is missing its closing bracket "]" — Python cannot tell where the list ends.' },
+    { title:'String + Number', code:['age = 16','print("I am " + age + " years old")'], bug:1, e:"You can't join a string and an integer directly with + — it needs str(age) to convert it first." },
+    { title:'Forgot to Return', code:['def multiply(a, b):','    a * b','result = multiply(3, 4)','print(result)'], bug:1, e:"The function calculates a * b but never sends it back — it should say 'return a * b'." },
+    { title:'Infinite Loop', code:['n = 1','while n <= 5:','    print(n)'], bug:2, e:"'n' is never increased inside the loop, so the condition is always true. It needs 'n += 1' inside the loop." },
+    { title:'Case-Sensitive Key', code:['student = {"name": "Nadia", "age": 17}','print(student["Name"])'], bug:1, e:'Dictionary keys are case-sensitive — only "name" exists, not "Name".' },
+    { title:'No ++ in Python', code:['count = 0','count++','print(count)'], bug:1, e:"Python has no ++ operator like some other languages — use 'count += 1' instead." },
+  ];
+
+  /* ---------------- STATE ---------------- */
+  let pyaGame = null;      // 'quiz' | 'puzzle' | 'bug' | null (hub)
+  let pyaSession = {};
+
+  /* ---------------- HUB ---------------- */
+  function renderPythonArena(){
+    const wrap = document.getElementById('pyaWrap');
+    if(!wrap) return;
+
+    const muteBtn = document.getElementById('pyaMuteBtn');
+    if(muteBtn && !muteBtn.dataset.bound){
+      muteBtn.dataset.bound = '1';
+      muteBtn.addEventListener('click', ()=>{
+        pyaData.muted = !pyaData.muted;
+        pyaSave();
+        muteBtn.textContent = pyaData.muted ? '🔇' : '🔊';
+      });
+      muteBtn.textContent = pyaData.muted ? '🔇' : '🔊';
+    }
+
+    pyaGame = null;
+    document.getElementById('pyaGameScreen').style.display = 'none';
+    document.getElementById('pyaGameScreen').innerHTML = '';
+    document.getElementById('pyaHub').style.display = 'block';
+
+    pyaRenderMarquee();
+    pyaRenderStats();
+    pyaRenderCabinets();
+  }
+
+  function pyaRenderMarquee(){
+    const lvl = pyaLevelFor(pyaData.totalPoints);
+    const track = document.getElementById('pyaMarqueeTrack');
+    track.textContent = `🐍 PYTHON ARENA  —  HI-SCORE ${String(pyaData.totalPoints).padStart(6,'0')}  —  RANK: ${lvl.icon} ${lvl.name.toUpperCase()}  —  BEST STREAK ${pyaData.bestStreak}  —  INSERT KNOWLEDGE TO CONTINUE  —  `;
+  }
+
+  function pyaRenderStats(){
+    const lvl = pyaLevelFor(pyaData.totalPoints);
+    document.getElementById('pyaStatsRow').innerHTML = `
+      <div class="pya-stat-chip"><div class="n">${pyaData.totalPoints}</div><div class="l">Py-Points</div></div>
+      <div class="pya-stat-chip"><div class="n">${lvl.icon} ${pyaEsc(lvl.name)}</div><div class="l">Rank</div></div>
+      <div class="pya-stat-chip"><div class="n">${pyaData.gamesPlayed}</div><div class="l">Games Played</div></div>
+      <div class="pya-stat-chip"><div class="n">${pyaData.bestStreak} 🔥</div><div class="l">Best Streak</div></div>
+    `;
+  }
+
+  function pyaRenderCabinets(){
+    const cabs = document.getElementById('pyaCabinets');
+    cabs.innerHTML = `
+      <div class="pya-cabinet c-cyan">
+        <div class="glow-icon">⚡</div>
+        <h4>Quiz Battle</h4>
+        <p>10 timed questions. 3 lives. Chain correct answers for combo points.</p>
+        <div class="best">Best: ${pyaData.best.quiz} pts</div>
+        <button class="pya-btn-play" data-mode="quiz">▶ PLAY</button>
+      </div>
+      <div class="pya-cabinet c-pink">
+        <div class="glow-icon">🧩</div>
+        <h4>Code Order Puzzle</h4>
+        <p>8 scrambled programs. Drag or reorder the lines to make them run.</p>
+        <div class="best">Best: ${pyaData.best.puzzle} pts</div>
+        <button class="pya-btn-play" data-mode="puzzle">▶ PLAY</button>
+      </div>
+      <div class="pya-cabinet c-yellow">
+        <div class="glow-icon">🐞</div>
+        <h4>Bug Hunter</h4>
+        <p>8 broken snippets. Click the line hiding the bug before time's up.</p>
+        <div class="best">Best: ${pyaData.best.bug} pts</div>
+        <button class="pya-btn-play" data-mode="bug">▶ PLAY</button>
+      </div>
+    `;
+    cabs.querySelectorAll('[data-mode]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        pyaSoundClick();
+        const mode = btn.dataset.mode;
+        if(mode==='quiz') pyaStartQuiz();
+        if(mode==='puzzle') pyaStartPuzzle();
+        if(mode==='bug') pyaStartBug();
+      });
+    });
+  }
+
+  function pyaGoHub(){ renderPythonArena(); }
+
+  function pyaEnterGameScreen(){
+    document.getElementById('pyaHub').style.display = 'none';
+    const gs = document.getElementById('pyaGameScreen');
+    gs.style.display = 'block';
+    return gs;
+  }
+
+  function pyaFinishSession(mode, score){
+    pyaData.gamesPlayed += 1;
+    const before = pyaLevelFor(pyaData.totalPoints);
+    pyaData.totalPoints += score;
+    if(score > pyaData.best[mode]) pyaData.best[mode] = score;
+    const after = pyaLevelFor(pyaData.totalPoints);
+    pyaSave();
+    if(after.name !== before.name){
+      pyaSoundLevelUp();
+      pyaConfetti();
+      return after;
+    }
+    return null;
+  }
+
+  /* ================= QUIZ BATTLE ================= */
+  function pyaStartQuiz(){
+    pyaGame = 'quiz';
+    const pool = pyaShuffle(PYA_QUIZ).slice(0, 10);
+    pyaSession = {
+      questions: pool, idx:0, score:0, lives:3, streak:0, maxStreak:0,
+      timeLeft:20, timerId:null, answered:false,
+    };
+    pyaEnterGameScreen();
+    pyaRenderQuizQuestion();
+  }
+
+  function pyaClearQuizTimer(){
+    if(pyaSession.timerId){ clearInterval(pyaSession.timerId); pyaSession.timerId = null; }
+  }
+
+  function pyaRenderQuizQuestion(){
+    pyaClearQuizTimer();
+    const s = pyaSession;
+    if(s.idx >= s.questions.length || s.lives<=0){ pyaEndQuiz(); return; }
+    const q = s.questions[s.idx];
+    s.answered = false;
+    s.timeLeft = 20;
+
+    const gs = document.getElementById('pyaGameScreen');
+    const hearts = [0,1,2].map(i=>`<span class="pya-heart ${i<s.lives?'':'dead'}">❤️</span>`).join('');
+    const dots = s.questions.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaQuizBack">← Arena</button>
+        <div class="pya-hearts">${hearts}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <div class="pya-timerbar-track"><div class="pya-timerbar-fill" id="pyaTimerFill" style="width:100%"></div></div>
+        <div class="pya-qtext">${pyaEsc(q.q)}</div>
+        <div id="pyaOptions"></div>
+        <div id="pyaExplainWrap"></div>
+      </div>
+    `;
+    document.getElementById('pyaQuizBack').addEventListener('click', ()=>{ pyaClearQuizTimer(); pyaGoHub(); });
+
+    const optsWrap = document.getElementById('pyaOptions');
+    q.o.forEach((opt, i)=>{
+      const b = document.createElement('button');
+      b.className = 'pya-option';
+      b.textContent = opt;
+      b.addEventListener('click', ()=>pyaAnswerQuiz(i));
+      optsWrap.appendChild(b);
+    });
+
+    s.timerId = setInterval(()=>{
+      s.timeLeft -= 0.1;
+      const fill = document.getElementById('pyaTimerFill');
+      if(fill){
+        const pct = Math.max(0, (s.timeLeft/20)*100);
+        fill.style.width = pct+'%';
+        fill.classList.toggle('low', s.timeLeft < 6);
+      }
+      if(s.timeLeft <= 0){
+        pyaClearQuizTimer();
+        pyaAnswerQuiz(-1); // timeout
+      }
+    }, 100);
+  }
+
+  function pyaAnswerQuiz(choiceIdx){
+    const s = pyaSession;
+    if(s.answered) return;
+    s.answered = true;
+    pyaClearQuizTimer();
+    const q = s.questions[s.idx];
+    const correct = choiceIdx === q.a;
+    const options = document.querySelectorAll('#pyaOptions .pya-option');
+    options.forEach((btn,i)=>{
+      btn.disabled = true;
+      if(i===q.a) btn.classList.add('correct');
+      else if(i===choiceIdx) btn.classList.add('wrong');
+    });
+
+    if(correct){
+      pyaSoundCorrect();
+      s.streak += 1;
+      if(s.streak > s.maxStreak) s.maxStreak = s.streak;
+      const timeBonus = Math.max(0, Math.round(s.timeLeft) * 4);
+      const streakBonus = Math.min(s.streak,5) * 10;
+      const gained = 100 + timeBonus + streakBonus;
+      s.score += gained;
+      pyaShowExplain(q.e, `+${gained} pts  (streak x${s.streak})`, true);
+    } else {
+      pyaSoundWrong();
+      s.streak = 0;
+      s.lives -= 1;
+      pyaShowExplain(q.e, choiceIdx===-1 ? "Time's up!" : 'Not quite.', false);
+    }
+    if(s.maxStreak > pyaData.bestStreak){ pyaData.bestStreak = s.maxStreak; pyaSave(); }
+
+    setTimeout(()=>{ s.idx += 1; pyaRenderQuizQuestion(); }, 1400);
+  }
+
+  function pyaShowExplain(text, tag, good){
+    const wrap = document.getElementById('pyaExplainWrap');
+    if(!wrap) return;
+    wrap.innerHTML = `<div class="pya-explain"><strong style="color:${good?'var(--pya-green)':'var(--pya-red)'}">${pyaEsc(tag)}</strong><br>${pyaEsc(text)}</div>`;
+  }
+
+  function pyaEndQuiz(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('quiz', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">${s.lives<=0 ? '💥' : '🏁'}</div>
+        <h3 style="color:#fff; margin-top:8px;">${s.lives<=0 ? 'Out of Lives!' : 'Quiz Complete!'}</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">Answered ${s.idx} of ${s.questions.length} · Best streak this run: ${s.maxStreak}</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaQuizAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaQuizHub">🐍 Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaQuizAgain').addEventListener('click', pyaStartQuiz);
+    document.getElementById('pyaQuizHub').addEventListener('click', pyaGoHub);
+  }
+
+  /* ================= CODE ORDER PUZZLE ================= */
+  function pyaStartPuzzle(){
+    pyaGame = 'puzzle';
+    pyaSession = { puzzles: PYA_PUZZLES, idx:0, score:0, perfectCount:0, order:[] };
+    pyaEnterGameScreen();
+    pyaLoadPuzzle();
+  }
+
+  function pyaLoadPuzzle(){
+    const s = pyaSession;
+    if(s.idx >= s.puzzles.length){ pyaEndPuzzleSession(); return; }
+    const puzzle = s.puzzles[s.idx];
+    let shuffled;
+    do { shuffled = pyaShuffle(puzzle.lines.map((line,i)=>({line, correctIdx:i}))); }
+    while(puzzle.lines.length > 2 && shuffled.every((item,i)=>item.correctIdx===i));
+    s.order = shuffled;
+    s.checked = false;
+    pyaRenderPuzzle();
+  }
+
+  function pyaRenderPuzzle(){
+    const s = pyaSession;
+    const puzzle = s.puzzles[s.idx];
+    const dots = s.puzzles.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaPuzBack">← Arena</button>
+        <div style="color:#fff; font-weight:700; font-size:13px;">${pyaEsc(puzzle.title)}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <p style="color:var(--pya-ink-dim); font-size:12.5px; margin:0 0 12px;">Put these lines back in the right order — use ▲▼ or drag them.</p>
+        <div id="pyaPuzLines"></div>
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaPuzCheck">✅ Check Order</button>
+          <button class="pya-btn-secondary" id="pyaPuzNext" style="display:none;">Next Puzzle →</button>
+        </div>
+        <div id="pyaPuzExplain"></div>
+      </div>
+    `;
+    document.getElementById('pyaPuzBack').addEventListener('click', pyaGoHub);
+    document.getElementById('pyaPuzCheck').addEventListener('click', pyaCheckPuzzle);
+    pyaRenderPuzzleLines();
+  }
+
+  let pyaDragFromIdx = null;
+  function pyaRenderPuzzleLines(){
+    const s = pyaSession;
+    const wrap = document.getElementById('pyaPuzLines');
+    wrap.innerHTML = '';
+    s.order.forEach((item, i)=>{
+      const row = document.createElement('div');
+      row.className = 'pya-code-line';
+      row.draggable = !s.checked;
+      row.dataset.idx = i;
+      row.innerHTML = `
+        <span class="pya-lineno">${i+1}</span>
+        <span class="pya-linetext">${pyaEsc(item.line)}</span>
+        <div class="pya-line-btns">
+          <button class="pya-line-btn" data-dir="up" ${i===0?'disabled':''}>▲</button>
+          <button class="pya-line-btn" data-dir="down" ${i===s.order.length-1?'disabled':''}>▼</button>
+        </div>
+      `;
+      if(!s.checked){
+        row.addEventListener('dragstart', ()=>{ pyaDragFromIdx = i; row.classList.add('dragging'); });
+        row.addEventListener('dragend', ()=>{ row.classList.remove('dragging'); });
+        row.addEventListener('dragover', (e)=>e.preventDefault());
+        row.addEventListener('drop', (e)=>{
+          e.preventDefault();
+          if(pyaDragFromIdx===null || pyaDragFromIdx===i) return;
+          const moved = s.order.splice(pyaDragFromIdx,1)[0];
+          s.order.splice(i,0,moved);
+          pyaDragFromIdx = null;
+          pyaRenderPuzzleLines();
+        });
+        row.querySelectorAll('.pya-line-btn').forEach(btn=>{
+          btn.addEventListener('click', ()=>{
+            const dir = btn.dataset.dir;
+            const from = i, to = dir==='up' ? i-1 : i+1;
+            if(to<0 || to>=s.order.length) return;
+            [s.order[from], s.order[to]] = [s.order[to], s.order[from]];
+            pyaRenderPuzzleLines();
+          });
+        });
+      }
+      wrap.appendChild(row);
+    });
+  }
+
+  function pyaCheckPuzzle(){
+    const s = pyaSession;
+    if(s.checked) return;
+    s.checked = true;
+    let correctCount = 0;
+    s.order.forEach((item,i)=>{ if(item.correctIdx===i) correctCount++; });
+    const total = s.order.length;
+    const fullyCorrect = correctCount===total;
+
+    const rows = document.querySelectorAll('#pyaPuzLines .pya-code-line');
+    rows.forEach((row,i)=>{
+      row.classList.add(s.order[i].correctIdx===i ? 'pick-correct' : 'pick-wrong');
+      row.draggable = false;
+      row.querySelectorAll('.pya-line-btn').forEach(b=>b.disabled=true);
+    });
+
+    const gained = Math.round((correctCount/total)*80) + (fullyCorrect?40:0);
+    s.score += gained;
+    if(fullyCorrect) s.perfectCount += 1;
+    fullyCorrect ? pyaSoundCorrect() : pyaSoundWrong();
+
+    document.getElementById('pyaPuzExplain').innerHTML = `<div class="pya-explain"><strong style="color:${fullyCorrect?'var(--pya-green)':'var(--pya-yellow)'}">${fullyCorrect ? '🎉 Perfect order!' : correctCount+' of '+total+' lines already in the right spot.'}</strong> +${gained} pts</div>`;
+    document.getElementById('pyaPuzCheck').style.display = 'none';
+    document.getElementById('pyaPuzNext').style.display = 'inline-block';
+    document.getElementById('pyaPuzNext').addEventListener('click', ()=>{ s.idx += 1; pyaLoadPuzzle(); });
+  }
+
+  function pyaEndPuzzleSession(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('puzzle', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">🧩</div>
+        <h3 style="color:#fff; margin-top:8px;">Puzzle Set Complete!</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">${s.perfectCount} of ${s.puzzles.length} solved perfectly</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaPuzAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaPuzHub">🐍 Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaPuzAgain').addEventListener('click', pyaStartPuzzle);
+    document.getElementById('pyaPuzHub').addEventListener('click', pyaGoHub);
+  }
+
+  /* ================= BUG HUNTER ================= */
+  function pyaStartBug(){
+    pyaGame = 'bug';
+    const pool = pyaShuffle(PYA_BUGS).slice(0, 8);
+    pyaSession = { bugs:pool, idx:0, score:0, streak:0, maxStreak:0, answered:false };
+    pyaEnterGameScreen();
+    pyaRenderBug();
+  }
+
+  function pyaRenderBug(){
+    const s = pyaSession;
+    if(s.idx >= s.bugs.length){ pyaEndBugSession(); return; }
+    const bug = s.bugs[s.idx];
+    s.answered = false;
+    const dots = s.bugs.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaBugBack">← Arena</button>
+        <div style="color:#fff; font-weight:700; font-size:13px;">${pyaEsc(bug.title)}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <p style="color:var(--pya-ink-dim); font-size:12.5px; margin:0 0 12px;">Click the line that hides the bug.</p>
+        <div id="pyaBugLines"></div>
+        <div id="pyaBugExplain"></div>
+        <div class="pya-btn-row" id="pyaBugNextWrap" style="display:none;">
+          <button class="pya-btn-secondary" id="pyaBugNext">Next →</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaBugBack').addEventListener('click', pyaGoHub);
+
+    const wrap = document.getElementById('pyaBugLines');
+    bug.code.forEach((line, i)=>{
+      const row = document.createElement('div');
+      row.className = 'pya-code-line clickable';
+      row.innerHTML = `<span class="pya-lineno">${i+1}</span><span class="pya-linetext">${pyaEsc(line)}</span>`;
+      row.addEventListener('click', ()=>pyaAnswerBug(i));
+      wrap.appendChild(row);
+    });
+  }
+
+  function pyaAnswerBug(pickIdx){
+    const s = pyaSession;
+    if(s.answered) return;
+    s.answered = true;
+    const bug = s.bugs[s.idx];
+    const correct = pickIdx === bug.bug;
+
+    const rows = document.querySelectorAll('#pyaBugLines .pya-code-line');
+    rows.forEach((row,i)=>{
+      row.classList.remove('clickable');
+      if(i===bug.bug) row.classList.add('pick-correct');
+      else if(i===pickIdx) row.classList.add('pick-wrong');
+      else row.classList.add('dim');
+    });
+
+    let gained = 0;
+    if(correct){
+      pyaSoundCorrect();
+      s.streak += 1;
+      if(s.streak > s.maxStreak) s.maxStreak = s.streak;
+      gained = 100 + Math.min(s.streak,5)*10;
+      s.score += gained;
+    } else {
+      pyaSoundWrong();
+      s.streak = 0;
+    }
+    if(s.maxStreak > pyaData.bestStreak){ pyaData.bestStreak = s.maxStreak; pyaSave(); }
+
+    document.getElementById('pyaBugExplain').innerHTML = `<div class="pya-explain"><strong style="color:${correct?'var(--pya-green)':'var(--pya-red)'}">${correct ? '🎯 Found it! +'+gained+' pts' : 'Not quite — here\'s the real bug:'}</strong><br>${pyaEsc(bug.e)}</div>`;
+    document.getElementById('pyaBugNextWrap').style.display = 'flex';
+    document.getElementById('pyaBugNext').addEventListener('click', ()=>{ s.idx += 1; pyaRenderBug(); });
+  }
+
+  function pyaEndBugSession(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('bug', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">🐞</div>
+        <h3 style="color:#fff; margin-top:8px;">Bug Hunt Complete!</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">Best streak this run: ${s.maxStreak} of ${s.bugs.length}</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaBugAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaBugHub">🐍 Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaBugAgain').addEventListener('click', pyaStartBug);
+    document.getElementById('pyaBugHub').addEventListener('click', pyaGoHub);
+  }
+
+  window.renderPythonArena = renderPythonArena;
+
+})();
+
 
 </script>
 </body>
