@@ -187,7 +187,14 @@
   .queue-card .qform{display:grid; grid-template-columns:110px 1fr auto; gap:10px; align-items:flex-start; margin-top:10px;}
   @media(max-width:700px){.queue-card .qform{grid-template-columns:1fr;}}
 
-  .avatar-sm{width:30px; height:30px; border-radius:50%; overflow:hidden; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex-shrink:0;}
+  .avatar-sm{width:30px; height:30px; border-radius:50%; overflow:visible; background:var(--primary-soft); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; flex-shrink:0; position:relative;}
+  .avatar-sm .avatar-initial-layer{width:100%; height:100%; display:flex; align-items:center; justify-content:center; border-radius:50%; overflow:hidden; background:var(--primary-soft);}
+  .avatar-sm .rank-badge{
+    position:absolute; bottom:-3px; right:-3px; font-size:11px; line-height:1;
+    background:var(--surface); border-radius:50%; width:15px; height:15px;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 2px var(--surface);
+  }
+  .status-pill{display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:20px; background:var(--primary-soft); color:var(--primary); white-space:nowrap;}
   .avatar-img{width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;}
   .name-cell{display:flex; align-items:center; gap:9px;}
 
@@ -238,7 +245,7 @@
         <div class="badge-mark">E</div>
         <div>
           <div class="brand-name">EICT Online</div>
-          <div class="brand-sub">Teacher Dashboard · v1.3</div>
+          <div class="brand-sub">Teacher Dashboard · v1.3.1</div>
         </div>
       </div>
       <div class="lock-notice">🔒 Private staff area. Never share this link or file with students.</div>
@@ -442,6 +449,22 @@ Ashan Fernando"></textarea>
   </div>
 </div>
 
+<div class="modal-overlay" id="statusModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="statusModalTitle">Change Status</h3>
+      <button class="modal-close" id="statusModalCloseBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="small-note" style="margin-bottom:10px;">Use this to correct a status that's wrong for the wrong reason — e.g. a student accidentally pressed Submit several times and it inflated their coins. Picking a status below sets their total coins to the minimum needed for that rank.</p>
+      <div id="statusOptionsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" id="statusModalCancelBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    EICT ONLINE — Teacher Dashboard (private, login-protected)
@@ -468,6 +491,22 @@ let STORE_VIDEOS = [];
 let STUDENTS = [];
 let currentView = 'overview';
 let currentFormCollection = null;
+
+// Same rank/status ladder shown on the student side — kept in sync so a student's
+// status here always matches what they see on their own dashboard.
+const RANKS = [
+  {name:"Agent", icon:"🟢", badge:"🟢", min:0},
+  {name:"Specialist", icon:"🔵", badge:"🔵", min:500},
+  {name:"Senior Specialist", icon:"🟣", badge:"🟣", min:1000},
+  {name:"ICT Commander", icon:"🟠", badge:"🎖️", min:1500},
+  {name:"ICT Elite", icon:"🔴", badge:"⭐", min:2200},
+  {name:"ICT Legend", icon:"🏆", badge:"👑", min:3000},
+];
+function rankFor(xp){
+  let r = RANKS[0];
+  for(const rk of RANKS){ if((xp||0) >= rk.min) r = rk; }
+  return r;
+}
 let currentFormId = null;
 
 /* ---------------- SCHEMAS for generic form modal ---------------- */
@@ -662,8 +701,14 @@ function storeTitleById(id){
 }
 function avatarHTML(s){
   const initial = s && s.name ? s.name.charAt(0).toUpperCase() : '?';
-  if(s && s.photoURL) return `<img class="avatar-img" src="${escapeAttr(s.photoURL)}" onerror="this.parentElement.textContent='${initial}'">`;
-  return initial;
+  const rank = rankFor(s && s.xp);
+  const photoHTML = (s && s.photoURL)
+    ? `<img class="avatar-img" src="${escapeAttr(s.photoURL)}" onerror="this.style.display='none';">`
+    : '';
+  const badgeHTML = rank && rank.badge
+    ? `<span class="rank-badge" title="${escapeAttr(rank.name)}">${rank.badge}</span>`
+    : '';
+  return `<span class="avatar-initial-layer">${initial}</span>${photoHTML}${badgeHTML}`;
 }
 async function saveStudentDoc(student){
   const {_key, ...rest} = student;
@@ -1104,10 +1149,11 @@ function renderStudents(){
     return;
   }
   const sorted = [...STUDENTS].sort((a,b)=>(b.xp||0)-(a.xp||0));
-  el.innerHTML = `<tr><th>Student</th><th>Access Code</th><th>Password</th><th>Coins Earned</th><th>Wallet</th><th>Total Marks</th><th>Missions</th><th>Streak</th><th>Purchases</th><th>Pending</th><th></th></tr>` +
+  el.innerHTML = `<tr><th>Student</th><th>Access Code</th><th>Password</th><th>Status</th><th>Coins Earned</th><th>Wallet</th><th>Total Marks</th><th>Missions</th><th>Streak</th><th>Purchases</th><th>Pending</th><th></th></tr>` +
     sorted.map(s=>{
       const isDup = flagged.has(s._key);
       const pc = purchaseCountFor(s);
+      const rank = rankFor(s.xp);
       return `<tr>
         <td>
           <div class="name-cell">
@@ -1124,6 +1170,10 @@ function renderStudents(){
         <td>${s.customPassword
             ? `<span class="mono" style="font-weight:700; letter-spacing:0.05em;">${escapeHtml(s.customPassword)}</span> <button class="btn btn-ghost btn-sm" data-reset-password="${s._key}" title="Clear it so they can set a new one at next login">↻</button>`
             : `<span style="color:var(--ink-soft); font-size:12.5px;">Not set yet</span>`}</td>
+        <td>
+          <span class="status-pill">${rank.icon} ${escapeHtml(rank.name)}</span>
+          <button class="btn btn-ghost btn-sm" data-change-status="${s._key}" title="Fix a wrong status (e.g. from accidental duplicate submits)" style="margin-top:4px; display:block;">Change</button>
+        </td>
         <td class="mono">🪙 ${s.xp||0}</td>
         <td class="mono">🪙 ${walletBalance(s)}</td>
         <td class="mono">${totalMarks(s)}</td>
@@ -1138,6 +1188,7 @@ function renderStudents(){
       </tr>`;
     }).join('');
 
+  el.querySelectorAll('[data-change-status]').forEach(b=>b.addEventListener('click', ()=>openStatusModal(b.dataset.changeStatus)));
   el.querySelectorAll('[data-adjust-xp]').forEach(b=>b.addEventListener('click', ()=>adjustXP(b.dataset.adjustXp)));
   el.querySelectorAll('[data-delete-student]').forEach(b=>b.addEventListener('click', ()=>deleteStudent(b.dataset.deleteStudent)));
   el.querySelectorAll('[data-view-purchases]').forEach(b=>b.addEventListener('click', ()=>openPurchasesModal(b.dataset.viewPurchases)));
@@ -1282,6 +1333,59 @@ document.getElementById('accessModalSaveBtn').addEventListener('click', async ()
   }
   btn.disabled = false; btn.textContent = 'Save';
 });
+
+/* ---------------- CHANGE STATUS (fix a wrongly-inflated/deflated rank) ---------------- */
+let currentStatusStudentKey = null;
+
+function openStatusModal(studentKey){
+  const student = STUDENTS.find(s=>s._key===studentKey);
+  if(!student) return;
+  currentStatusStudentKey = studentKey;
+
+  const current = rankFor(student.xp);
+  document.getElementById('statusModalTitle').textContent = `Change Status — ${student.name}`;
+
+  document.getElementById('statusOptionsList').innerHTML = RANKS.map(rk=>{
+    const isCurrent = rk.name === current.name;
+    return `
+      <button class="btn ${isCurrent ? 'btn-primary' : 'btn-ghost'} btn-sm" data-set-rank="${escapeAttr(rk.name)}"
+        style="justify-content:space-between; display:flex; align-items:center; width:100%;">
+        <span>${rk.icon} ${escapeHtml(rk.name)}</span>
+        <span style="opacity:.7; font-weight:400;">${isCurrent ? 'Current' : `🪙 ${rk.min}+`}</span>
+      </button>
+    `;
+  }).join('');
+
+  document.getElementById('statusOptionsList').querySelectorAll('[data-set-rank]').forEach(b=>{
+    b.addEventListener('click', ()=>setStudentStatus(studentKey, b.dataset.setRank));
+  });
+
+  document.getElementById('statusModal').classList.add('show');
+}
+
+async function setStudentStatus(studentKey, rankName){
+  const student = STUDENTS.find(s=>s._key===studentKey);
+  const rank = RANKS.find(r=>r.name===rankName);
+  if(!student || !rank) return;
+
+  if(!confirm(`Set ${student.name}'s status to "${rank.name}"?\n\nThis will set their total coins to ${rank.min}, which is the minimum for this status. This cannot be undone automatically.`)) return;
+
+  try{
+    student.xp = rank.min;
+    await saveStudentDoc(student);
+    document.getElementById('statusModal').classList.remove('show');
+    renderStudents();
+    renderOverview();
+  }catch(e){
+    console.error(e);
+    alert('Could not save the new status — please check your connection and try again.');
+  }
+}
+
+document.getElementById('statusModalCloseBtn').addEventListener('click', ()=>document.getElementById('statusModal').classList.remove('show'));
+document.getElementById('statusModalCancelBtn').addEventListener('click', ()=>document.getElementById('statusModal').classList.remove('show'));
+document.getElementById('statusModal').addEventListener('click', (e)=>{ if(e.target.id==='statusModal') document.getElementById('statusModal').classList.remove('show'); });
+
 
 function accessBadge(item){
   const n = (item.hiddenFor||[]).length;
