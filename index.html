@@ -735,6 +735,14 @@
   .pya-ss-compare>div{background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px;}
   .pya-build-stage{display:flex; align-items:center; justify-content:center; min-height:70px; flex-wrap:wrap; gap:8px;}
   .pya-confetti-piece{position:fixed; top:-10px; width:8px; height:14px; border-radius:2px; z-index:9999; pointer-events:none; animation:pyaFall linear forwards;}
+  .pya-topo-stage{position:relative; width:100%; aspect-ratio:16/9; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; overflow:hidden; margin-bottom:14px;}
+  .pya-topo-svg{position:absolute; inset:0; width:100%; height:100%; z-index:1; pointer-events:none;}
+  .pya-topo-node{position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; z-index:2; padding:4px; border-radius:10px; transition:transform .12s; user-select:none;}
+  .pya-topo-node:hover{transform:translate(-50%,-50%) scale(1.08);}
+  .pya-topo-node .icon{font-size:26px; filter:drop-shadow(0 0 6px rgba(52,228,234,.4)); line-height:1;}
+  .pya-topo-node .lbl{font-family:'JetBrains Mono'; font-size:9.5px; color:#fff; background:rgba(0,0,0,.4); padding:1px 6px; border-radius:6px; white-space:nowrap;}
+  .pya-topo-node.selected .icon{filter:drop-shadow(0 0 12px var(--pya-cyan)); animation:pyaTopoPulse 1s infinite;}
+  @keyframes pyaTopoPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.16);}}
   @keyframes pyaFall{ to{ transform:translateY(110vh) rotate(720deg); opacity:.25; } }
   @media (prefers-reduced-motion: reduce){
     .pya-marquee-track, .pya-btn-play, .pya-option.correct, .pya-option.wrong, .pya-combo-pop, .pya-confetti-piece{ animation:none !important; }
@@ -788,7 +796,7 @@
     <div class="auth-error" id="loginError"></div>
     <button class="btn btn-primary btn-block" id="loginBtn">🚀 Start / Resume Mission</button>
     <p class="login-foot">Don't have an access code? Ask your teacher — they assign one to each student.</p>
-    <p class="login-foot" style="margin-top:6px; opacity:.6;">v1.3.1</p>
+    <p class="login-foot" style="margin-top:6px; opacity:.6;">v1.3.2</p>
   </div>
 </div>
 
@@ -822,7 +830,7 @@
         <img class="badge-mark logo-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAYAAACLz2ctAABEA0lEQVR42u2dd5xcZb3/36dMr9uTbEg22fSQQgqYEDF0Qr0SykVELCj6s14vig0Evd57Vbx69eoFRSkBhIQmLVSVEEogCUmAhJRN3d53p5/2/P6YOWdndmeXqHDJhnler8lszjxz2vOZz/f7/Xy/z3MkIYSg1ErtfWpy6RaU2vvZ1Pfz4EIILMsask2SpCF987cN93epjb4mHQ0m2L4EIQTFLqcE3hIDFmW5/v5+fvvb39LR0YHX60VVVfx+P4FAgEAggM/nIxgMOtv8fj8+nw+/34/X68Xj8eByuZBl+R8CVD5w7ffB+yoB9yhiQNM0URSFl156iRNPPDHrjMoysiwjhEBVVbxerwM4VVVRVRWXy4XL5cLr9Tqf2+AMBoMEg0FCoZDzHg6HCYVCDqBtUPt8PjweD263G0VR/q5rsCyrwF2QJKkEzNFkgoUQ6LrOLbfcwk9+8hMaGxuRJIloNIqqqs7gejweB2hut9v5bDBjDWYmG9CyLKMoCi6XC7fbjcfjcQBsM6wNznz2tUFtb7df9vdGAqUsyyUwjiYfsL29ndtuu41bb72VPXv2AODz+fB6vQVAcrvdDiC8Xi8ulwtFURz2scFm/20DYTBLDecr2gGR3Sd/vzYDe71eQqEQFRUV1NbWMnHiROrq6qitrcXj8Qy7vxIgj1AA2uYYIJlM8uijj3Lrrbfy7LPPOn2i0WgBGCVJwu12O2yUD8Z8f3AwCG1wDgbt4H6DGUwIgWmaGIaBaZrouu68ALxeL1VVVUyePJl58+Yxa9YsJk6cWLCPEhiPYAa0B1hVB2KiTZs2ce+997J69WoOHjzoDHQ0GsXj8TggAlBVFY/H44DR9u3swc4H1eD3wdvyQTL4lW/m85nUMAwymQzpdBrDMPD7/dTV1TFnzhwWLVrElClTCtixBMYjVIaxdcF8Burt7eXJJ5/k7rvv5plnniGTyTisGIlE8Hq9BQOpKIoTYNjvqqoOAWQ+4IqBspjpHgks+eesaRrNzc2kUil8Ph9Tp05l7ty5LFiwgJkzZxKJRIZE4B9UMB6xOqDt0OdHqTt37uTBBx9k9erVbNmyxQFcVVUV4XAYj8czhMXs4MN+2WAc7B8OZ4JHYsB8JswHYltrC8lUmnQ6ja7rKIrCuHHjEEJQVlbGrFmzWLBgAXPnzqWqquoD7Tce8UK0zYr5jGUYBuvXr2f16tU8/PDDtLS0AOD3+6mqqiIUCuHxeApAYgco+XKOy+VyAPm3mN7B25ybCSArvL17H7KZxBIgBHR1dTF//nyi0SjJZJJUKoVpmkQiEerr61m0aBFz585lwoQJHzgwjqpMSDFW7O3t5ZlnnmH16tU8+eSTxONxAKqqqqisrCQQCKCqqsNUNhDtwCNfY7S355vrfKDZP4BiArUkgWlJhL0CrbuB+55vpDyokk72U1YWZfHiE2AQqHVdJ5VKYRgGgUCAuro6FixYwLx585gyZUqBT3y0gnFUpuLyc8j5YNy/fz+PP/44999/Py+//DKZTIZAIMCYMWMIhUL4fL4Cv6/Yy2ZJRVGGmOrhBt/eZiHhlzKsHPsSz++zuP+1DP1amKVLP4zPLVAkA0mSsCyw8jIudhBmm2yPx0NtbS1z587l+OOPZ9q0aQQCgaNSbxz1ueBiJhpg27ZtPP744zz88MO8/fbbeDweJ0MSCARwuVwFzFZMislnyvy/hzXDwqIvnqa9aR9Lxxzi2DpBtGYM3dIUtjYGae5W0HUTj2rhVgVIYFn2j0kaAsZMJoOiKNTU1DB37lw+9KEPMWfOHKLR6FEDRuloqgccbjDuvfdevvjFLzqs5vF4nJSdHUUX0w7tv/M/G047tPdhmgbpjE5LRwKR6aEu2sfCyWmm1QWQg9U09pWxq8XPoTZIpY0sGN0gS2BaA9eQf02ZTIZUKuW4FjYYFy1aREVFxTv+GEsAfB+aYRjIskx3dzeXXXYZGzduxO/3F4DFLn4IBoP4fD5cLpczkMXAOJw0M1RPlFBkCdOC/qRJLJ5G0vsYF+pm9jEZpk8J4ItW0RovZ8cBFw0HNOLxDKpi4nFLKLKMJUQeOw4ALJPJkEwmMU2TyspKZs2axYknnsjixYsZP378EJH/cCSkEgDfA7MMkEgkuPDCC3nuueeorq52Ch0GSzGDwWhH0PmDX0xHHDYadj4HWZJQFBkkhWQG+mNpzHQP1aF+Zk+B2TPChCtraO8L8eYui90NCXr7EiiygdetICsylmVhmlbBtVmWhaZpJJNJNE0jHA47YFyyZAnTpk0bAsbBemUJgO+hT6goCl/5yldZs2Y1VVVV6LrufJZluKxE4na78fl8uUE2sSwLt9vtVOK4XC7nM9u8FwtMBlfGDLmtuWOqqgKSQioj6OtPoaf7qAinmDtDZd6x1VTWjKO9y8O2nTrbd3bS3d2LSxX4PCpIEqZpFoDRPlYmkyGRSDiB19SpU1myZAkf+chHmD17Nm63+4gE41EHQDu3fMstt/CDH/yA6upqJ/+bH9nazn6+vGIPhmEYGIYB4FTj2Kxo54MH+4VFb25u++DKney7QFFkJEkmlbHo7U2STvZTEU4zf1aARccdQ01NLW29Pja/2cO2t5ro64vh80h4PS4sS2DkfjD52RQ7ExOPx0kmk7jdbiZOnMjSpUv5yEc+wuLFiwmHw0P85vfLbzzqghBZlnn99de55JJLnMyHrfflg9D+v503tgfRZjrLstB1HU3TME0TWZad4geXy4Vpmmia5pjpw2GTYkAUIqtWy3JWTEylLbp7EqSTvVSGNebNrmDZ4jqqqqs40C7x5xeb2bGrDZdsEgy4sASYOcW7kOEHtMZ4PO7oo7W1tSxatIjTTjuNZcuWMWbMmPc1iDlqAGgPpqZpXHTRRbz55ptEIpEh7GcDUlFkZDkbEdtgzPcNbbObSqXQNA1N03LVLwKXK5tntlnR/jw/j13MDBebOmCzYRaH2e2ylAVjIqnT0xsnnehlXJVg+Qk1LD9hPP16kMdf6Gb9hkY8soHP78Iwc2mXIvfEdhtM0ySRSNDf349hGFRXV7Nw4UJOP/10li9fTn19/RBr8l6b6aMGgLbpvfnmm7nhhhuorq52gofhAKgoqlPmNZgpbb/QrnSxpZBMJuOUYcmy7ADR5VIxjAExuViBQXFTPACUwS+EQJKzuIolNDq7+lGtfpbN83LpufVI/ip+fV8zb7zRQjQkY5hZBrNfYhAr2sezxXvbVOu6TmVlpcOMZ555JjNnzhxiWUoAHJb9smajtbWds89eQSwWc4A1OLORn26zCxUGg9TtduNyudA0zRkAmxFtGcQGGghkWcHtdjmlYJIko2kaqVQKXdeHVPgUBdsgZrRBk68LyjLohqCjK0Eq1s3ZJ6h88YoZPP66i9/ds5eIX2BYhSDMf9nuRb6PaoPRMAySySSGYVBRUcGCBQs4//zzWblyJTU1NcPOViwBEDBNC0WR+flPfsR//uyX1FTXIBBFwZd9yTlB2lvAivnsl402zSGMYv+t6zrJZJJEIkEsFnOmD3i9HmfOSdZXtEinU6RSaTRNKxDKi4FvMFsNPi5kRWsBNLUnCVod/PKaWhqNcVz3i71EA1YBE+Z/dzgGtpt9XnYmxrIsjjnmGP7nf/6Hs8466z1hQnX0G1+RpQazk9T2O5HdQcBCkorLJdlfsTQktWa/27PsbLAMBok9mLIs4/f7nX3E43H6+/vp6xOOtOPzDVRsBwJBh2WSyaRT1zh4mkB+nnswIO3/G7n3MeUuUnotH7uhjfu+m+Lqj0b59eoOokEwDAvLylZx2+c8OIuTfw9sYNmBmNvtRghBQ0MDzz//fAmAw+PPAklBNK9lRuQgilKHJEtI0tD6PnubzXbFKqTdbrcjwQxnHm0g2IFHdo6Kh3Q6Q39/P4lEgng8XlCpnZ3U5CMQCBIOh9E0zemXyWQKfMbhmDHflFqWRTptgjAJlQW58j9aWH2dzropHnbuTxMKuJFkxXE1bJbPzzfbcpNtmvOnOkSjUaLRKLNnz+ZrX/vakCqkkgnOZ0AkeOnjHNr6OOf/ugJdDuJW7ehXLQgyFEXB6/Wgqq4hptmeW5JOpwvYJ3/Q7ZdhGHksaWFZAyyVyWSIxWLE43E0TXOO7/F4CQT8BAJ+/P4APp8XSZLRdd0Bo+1b5h9rsM+WX8/ocrnw+9y098OysXs5+UPV/NeTlYQ8GrohcudtIgSOu+Hz+QiFQkSjUSorK6murqa6upqamhqqq6upqKhwpj68121UM2A2+JBpamqm983XmT29jI9M1/nTG+CPSCANzeNm6/7UITlcO6K1TeOwkWnuM5slsxJKof+mqirRaBSfz0csFnMyFMlkit7eHmfecxaMAfz+7Ey/cDick5IyZDIaPp/PCYjsF4gc8+b7hRbBkMX2nklc7IuxdMF4LDlKRXmE8vJyyssrqaysoLKykrKyMiKRCMFg8B0ZrdgUiRIAC7NbSBLs2H2Iv/61nX+bV80Vp6V55m0dIflR5ELfLytMu4b4QnbGIz87UkwisYOCrF8lnHMYmnUTjixkM0l/fz+pVMqpbkkkEnR1deFyuQrMtM/nRVFUqqurqK6uLhDE+/p6CQaDTJ8+3WGwsrJyysvLKIuECUSqqOy6j2WXTkcde95ha6eDI+P8lOJ7YXaPsiAEAj6VRzZKXNNisHBxkAuOT3H/BomachlLSE4JVtbvG1rJoqoqbrfbYb9ijv/QICF/8IZnSsuycLlclJWV4fV66evrI5PJOOlAG4x2/tp2Ffbu9eJyqaRSaXRdwzQtkskkK1as4Pvfv2H4bFDZ+ehN96KOPQ/LNBBIw4LrSKiSGdUAtG/epIlj6TOrufnJXr71pTBfvVRmY0OS7lSYSMiForqL1vLZL6/XW5CGG479BsshWf9zIIsxHKvYAPZ4PFRUVDgRs23G7UobW/6wWTj/Ou1Mxr59+5yJTkO1OYEUnYZ1UEakG5C99QM+8hHa5KMBgDXVY1h6wnz+93GNXdvT1NR5ufbKKKrLjcvtyaXd5KKT0e35ILboPJL/ly/mDrwOT1jOB2IgEHDmq9j+pL1fn89HRUVFQVBQXl5ONBolEAiQyWQj7aJTCqQs1OSyEzDa/jrgpxzBbdQvUGmaJpIsc/HKC0gbAb71+ySGqObUc+bx5Y/X0NOnoSoK8hBJJvvyer2O6DzY98tnu/yIOMsqFIBvONmmGDDtQtFwOExlZSXhcJhAIEB5ebljqm2GyxeRVVUlmUwSi8WKCslIWX/NPWYZWu9BsBIgySUAvqcXkPOlTj9jBcs/vJDXd7n52V1psGQu/6djuOTsGnr6dWRFzpU/FWp+qqo6ud3BOdThwGRH4O/cR4wYzNiBSiAQIBQKOVU25qAyK/v7kiSRTqedypbikYWJ5PIhu8djdq0f0EpLAHzvzLAQglAoyOe/+GXG1lVz96Pd3La6EQI+vv7Z2Vx58SQSSR0hJFwu1YnuPB6PkykYjrEG64EDPt/IRQWDU18jmeV8nbGYDJJ/rdkKnfRIdyTr3I85lUzrxiOfQEa1BmNfhCRhCcHJx5/ARZOnEqgMcssf27nzrj1Ifh+f/eRcvvHlxXi8KvFEVhj2+byoqoJhGIdVFDAALBwTPBh8I8kcw5njwwHwAACztX+SNIJflyufUaOTMTMmIrUvZ4ZFCYDvJvgsSULY0WJOEOz75W+4ZO2fOSkQwlsZ5dd3HOSmX27E1CXOPG8OP/nBCk5cOhnLEmiaQTyeyvljIMvZyURZhrOGZUUQBVmPv8X0jsSuw0XddnMpEkkNplUKplTJDiCHEWOyclNoJnrTXwHriDXDo0+GsSyQZRJPPYPY00Dwi59HlmUSXd30PvQnPOk0X3x9O+qCY9lQHeGhJ9o40PQ013zlFCbOnMW3vz2Lt99Os23bXnbs2MmhQx30x9LompkFoZKtNskOrs02+S/+ZpANZrvDMc0iZ+4VOWtW+1ICr2JwzYoQwUDwsHjFXfMhEtt+g3vKkcuAyg033HDDqDK7soyeSBD7xGeRpk/Dt/RDSJaFEBbG+pewDhzCv3ghy2+4jn6Ph9ZD+2jttHjur7sx0zEm1U2h9pg5zJ49heUnjeWEBeOYPiVKVYUbtxs0TSeR1EkkDZJpA02zMK0sK2ahYIGUcwJzIM1PhwghEJbIrXxgs1weGC3LjqFzRafWwD6wkHLbTcsiowsSGUhrFvNq4b8vCzCzNoL/+C/j8fqyhy9Gg1KWyWV3GG3XKtw+DSl87BGpCY6uYgTLwpQk+r72DfTnXyT67GN4KiscE6x3d2PsP4gyYzpuvw8swYMPP8SDDz5Af38CLaMzdXI58+fXMWvmWGZMqaCsOgiqAmQgEyfe0UNTcw/7D/Ww/1A/h5rjtHSk6erRiMV1UmkTwxBZXwwBkkASVi4vLXLRsYWwzCEyij2jzbIsDDP3MkwMS6DrJkbuMwkTn8tiTEhi5liFU2a6WTHPj6qm2P5wJx++chW+j1+MlLMGQ3+oVtbv638VGv4FQT9S3U+g7CyneqgEwL+H/SSJ1N59pP/zJjxf/gL+OccOJITtd0eNMJFyeczdu3dz//1r2LFnD7h9JHt6MVNxwkGFsWN8TJ4YZNrEMPUTAoyr8aFEXOABLBPSGUR/mo7uJO3dOq0tbTQ3tdPeLejqM+npt+iLW8STFumMIK1ZZPRsUahuWDnADfiVEhYyFqpkoioWPlUQ9AoiPovqIIyNyEyokDgmKjM+qlIVlnFJFk3tKf736RZOPPNGLiwfj3HZRXjC4SHXbfuAIENmD9ZbV2C2NiECS3B/5L6Bz0oA/DuF50wGPB6UPFDazdA0Unsa8E2qQ/X5ssFKrgIZYNOjj7HuzlU0lUfpdbnoT6ZJdfZkdUBh4nWblIVgbIXMxLEu6mp9TBjrZWyVl2iZGyIBEF2QPACWBLoBaRPSBkbSJJk2SKUM0mkTTbfQdQvTFFhmltWywAOXDB5Z4FElvKqER85ukwBMyKQMemImrd0aDa0ZXj+g88ArScYtOIvHn16LRwYro6F43CP8YLMsaG75KkbrU0jhMbjn/wL88wcYsgTAv48FC37DudM3urrpveZbaM/9Fc+py4n88meooVAWhICVyZD+wldJPvYEfRXltAT9HJxaT8vCeTQ3N9HZ2UV/LEEqrZMREnpGQ2RSuCSNoNciGpaornBT7k9S7otTUyZTGZYo80PEB0GPwO8SeBWBIuf8RCnPP7RMMCzQIZMRJNMW8aSgL2HS3W/R2WfS1mvR1G1xsFPnYKdJU79EY0windE5fulJ3P/HVRwzYQJm7vrfYRJotofVD503YrZtRFbHIE27FeRg7stSCYCHj71sJiD+6OOkHltL6LvfxDthApgmpqLQ+90bSP/if6C8DBIJfHffTvmKM8AwQFXRt++g4+yPYhkGLllCjiVwz5xO6M9rSRgGzY2NHDh4gP0HDnDwlQ10plP0uVz06wbJeJJkRzeZtIZmZEVjhIkkDBTJwCVbuGUDl2Liki1ciokqCeScX4gQmKaFYYJmWKQzJhldIm1AUhMkNEFKs0jrFsIU4POC10PA42JiOMiFF17ANd+8lki0DL2ri74f/QTX7FmEP3MlUlETPJAVQVIg8TTG2z9EysRRxl0IddcdMSw4OmQYSyDJEpmGvcS/dT3G2ztRZs/C+5X/l3XCMxnM1zZCJITkcoHbPcQ8iUAAye9Ham/H8HkRmQwsW4rweAh5vUyfMYPpM2YAEItU0Pyv36LH56HL46Zj3Bj6LlhBTzpFV0cHff19xOMJEolUbqqmjmYJErqBntSygUVewDGQWrNAUZA9bsBCtjIobggH3Yz1ewmHw1REIlQfamQCMvVpnWMraph/3ffB58MUgvhTz5D5zW/RKitQ5h1LcNFCR5oqKkojwP9hJH8tZrwBGh9ECp+GXL7kiADhKNEBBQKJ5EuvYHV0QmVFFkC2LqgoSBXl0NsPSgLltJPxHb+IXB06CIEycQLBb3yN+C/+B2GY+M5ZQeibX0eRpDxpJNuCl6zkGNOk8uFHmeF2E/zni1DPWQGQWxAoQSwWJ9bfT388Tvf+/XRv2Upa1zHH12K4VHQtg2Fky+ERIMkSsqoi9u5HfWsHfpeLshVnUrHgOMpC4ewcjLIyAn4/ma9+A3PVPUhCoNdNIm0JPLmgykykkMIhLF3HePlVWLRwhIoXKQcyH1J4PqJlO5Zhwa5fIp+w+IiIhkeVEG3qOiIeQ4pEcH/oeMcHlFWVwLX/imVayBXlhL7zTdzBYEGQogDBT30C11lnIDIZ3HUTURyikId4Q97LLsF92SWInL8lhEBCchY7j0bLBjqfcAJceunhyWxCwIGD4HbDuLHFu/z7jfSGgpg7dxP6+lfwBPxIpokEBD50PFo4jDh0CDlXRPFOP14AyT8VZAvL8EPXBsy2v6CMOX3ATJd8wJFNMLJEZt9+Yl/6F9TTTiH81S8iS1KB/5MRAlmScBWJkPOzKPnBy7D+k2EUyjs5SadYDreAgQTZVMoIQrpzzCLPm7PfDcCwLLz5pjWXgozdcRepVX8k9LP/JDBvzvAmOF8TTLyIvuUrGEkZOd2BVP4R3CfeMYyMUwLgsL9lkQsqhtxu0ywETFGBdtDNHu7m57YXENo79CU/z3AYfUfcp2UV6puD5mVYgNB1ZJfrMOLYnGaQ3oyx9f9h9BuIdBwMA98ZayEw9X31BUeVCZYsC0lVh7JXbpDMHAiGuyhLkoht2YpIJAgsOA7XMA8dFJJEZk8DmaeeRfi8+M4+C8+YmmFOSiLT1EzqiaeQdB3P6afimVpfHBiShJ5IEN+4GTkaITRvbnFJWJYLr2UQUGUhwOUamfmGXJSeJV9VReDCSrRgHFyLOnMq72ueWIyylk6nhW6aAxssSwghhL53n+j+/JdFx5e+JjJNzQOf5V6Gpovub10nDk2cJg7VThbtH71UpFtaC/YhcvtN/OV50TJzvmiKjBGNkRrRuuxUkdq1e1Df7Hty5y7RsvRk0RSuEY3RMaJ5xnwR/8u6gj72dzLNzaLj/IvEwXGTRGPddNF97feElk4LYYncK3ctPT2i+5pvi/ZPfU4ktr1ReFwhhG5ZIp1MFt6YvM8Lt+fuVewxYW5cLDIvnCiSj84RsdsjIvH4+Xan9208j/hyLCuvSkRrbqbnko/T9/VrMdIZhwnNdIa+b3yH5J13k7n1DuL/eROmzZKWlU3hPf4EyZtvRdYNZEVFe+oZEnf9EctmmBzLGLpB4te3YDQ1Q3kZUlkZxutbSNxxd5Yn8otJgdRtqzC3vZHtG41iNTcTv+V32QlH0sC+LSC+6l4yz/4FRXWBppO8+Xdknnwm2y9ndi2g7+ZbSf76FrTVDxL78r+S7ux0zLFlCWI//E+6zruI9J6GAtYesaV3ZZcrURVkVUKS3eitbyDSHblo+f1hwSMagIYQ9N78O4xDjQggsfpBjGeeJbPmAYzt28nNsSS2fTvpjZuRKiuRIhEyW7aSisezfpwdJ7yxPTtIbnf2gTFeL5lDh7BrXGwTaWbSGJ1dyH5f1q8UAjwerK6uIQqHBFjd3eDxZAFkWUg+H2ZHJ5auDZjNXPZGP3gQyevNHt/tBlnBePOt3DkMmFlt8xakYACpugpjx9sYm7YMmPu9+0jfuxrr+RdI3XEXAki1d5DauHloQOTsMw6Zt8AdRFIkJFUBScXsa8Lsfjvv51QCYMFNFKkUyUefwGhrRwLMhr0QCCIpKnIyNcBE9rJjkgRaBqmmBk8uF+wEnHUTwdDBNMAwsDSdwMIFOSlmwOFXAwHcc2dj9fZn9cFMBmGaqMuWFj1H10c+jDAMhKYhTAurvx/P/LkoPn82epcksAQK4P3Q8ViGno2wDQNhGMj1k/LSijmc1dQgNM35rmQNTNO0EnEsIVAiYdK795ABRFMTmSeeLAKhXFiU+Svo7aD6s+vmKAoICZHWMHv2Fhy7BMD81tWN3N6BsLMa5WWI7m5EeRnWpEkOEMLHzsa1aAFGeztWJIL/81fhsoMVOVui7vunc/F87FJMAUJV8X7pavyXrMymsvIceUWSCF57DerllyL5fEiVlXiv/w7hSy8q7CvLSEIQuHglnu98E6myAvw+3JdfRuSaf0Fx6gUBxe57Ib6rr8JSVSzA+/F/xnfO2QPnmZtGHr7yY0hjx2K0tiLNPRaXLTYLgWvSJNRjjsHo6kSpqEAFhMdDuq0NS9cHImdbwTQbofdPIHmz7CcrSLIEpokwwUo0l4To4eQKK55ArapEHTcOAP+lK9F27yG08qN4asc6LKT6fER+8VO0s85Anj0D/9IlDkjs5g6FKP/Vf9Hz6StRvR4ic+cMjVRzg+cZN5bK3/4avWEvst+Pq3Zc8V+qJKG6VMq/+XWMyy/FSqVw19ejFCkPQ5JQPR7Kf/Ij+i6/FFPTiS6YX7j0hSQhCYF/0UK453a01zbhPnU57qpKB4DucIjgd75Bb1mE0KevRAWs8bW4fD6kvn6orMi7jwb03YEgieTygymQ1DRCN7OMbQF6/P1VNo5kHdBKpdGbmvBMqR+sah0WgP+ubX+LXvd36ot/87bBtY4D/Ob8XzvUiKuyAtnnGzC9Qke0XgOJA+CNQCYB/T1o+/ejt3WRbO0jcuZ38Sz5t2y1jvx/nxE5ok2w7PMWgA8hkA0jGxwUE281bSCDUYzdLJGt4TOMkUElSdn95Xy1w4uYcn1zUfew+xUi2083BnzEYv1MM3s95tD9SZaVvQ/WQAjlOWZ8Dnz2FgskF1L5JeCSEZ2tWO1tGB3tSHoKYWX9Y8VfRn4cVjLBxd3ogWhSVZGK3S9ZRuQexiINxyqyhJDVgfs9ElPJMlYuR3w42Q2hHuZ+D6dvTlgXilK8jywjBuWvh6ahc5UwnhORxguQfgON3ciWiWlJYJgoblDKJ7+/JHMkg8+Mx0m/ttHRAY1Uitj9D6HvPzAwULnPMu3t9N11L8mNm4dqYrkB1No76P3jffQ99AhaPF5cO8vlW1MN++hbdQ+xRx5Di8VGZDWtt5f+B/9E3z33kdy/P7tfMUzWpLeXvgcfpv/eNWjtHbm+ouD4QpJIvfkWvXfchXaocYA5bT20vYO+NQ+g9/c7X0u9vgW9u3uQFJOdnISyDGn8D5HqTkMOuZHNGEJL4KutRqpayPtKgUdkusPOSGzZKtqXLhfp5hYhhBC9t90pGl0h0X7x5UJLJp0sh5ZIiPZLrxCN/nLRUj9bxF5YP7AfOwvR2CQ6zjhPNEZqRGN0rOi87Eqhd/cUzYQk170oWucsEk3RsaKpbJzoXHmZ0NraCvva+21tEx0XXCwao2NFY9lY0TLveBF/8eWC/dl9ta4u0bnyMtEYHSOaImNE+xnnikxT00Af+/hbt4mWYxeJRl+5aD/rAqF3djr7M01T9Hz56+KQ5BM9P/uFsIQQmf5+0XHuShHbvKXwuAM3dODP2AtC7PyWMJ8/Q4jdPy9lQkZqejKF0daB6OlBAOkXX4ZAAG3zFvSGvY4Qndq8Be2FF5GqqzG7ukj/YVV2WmTOlxNA+p77SL/4MlJZGVIkTOaRx0mueSBLVHnJf13TiP3iVxj7D0I0AuEg6SefJrnqnsJMSC5rkbhtFZnn/oIUCSNFIph795P4xa9ymZAcc+XOIbn6QdJPP4sUiUBZFO2lV4jf+0BWv7MXQQIS9z2AefAg0rgxaK9sIPHXFxzTmzzURPKFF1EiEWIvvERGCBLt7Wjd3aih4AiGLnfewWUw7T+QT1oLU772/rLfkW6CXR5P1t/J+Uxybs1iYZkIfSA4kNJphAQSUjZJ39k5AMDcoOrNLUhu1wCAXC4yDfuyg5+fsUgk0dvakQJ+J9gRXg/GvgOFwyRJA+K4x5Pdr2kiBfwYrW2IVGpIJsTYfwBJUQfMpOpCa2kZOIdcBY7e2YnkcjspMisRdyy6MHSE/eBEd7YaRnW5kRUFJfe42eLugjSgI4iclnAECCBHJgBzN9B9zHj8n/4E6piabKS3/CTQDdzTpuKaVDeQjTh2Nq6xYzG7uiCZRDp+MYosO6yiAK6FC8C0ELqefZkGnuPmZW+AGIhQlXAY95TJWLbfZ1lIaQ1l5vRCt06IrBQyawZkMtmVDCQJKxbHPaUeORAoKKmSAfdx87PZldw5YJoEFy0YqHjJ9fPOm4tIpxBdXdmszuLFTjDiHV+Lb+5cRCpN+PRTcUsSgZpq/JdehBQMHN6Q26X6R8BjW4/MlRFyN0YO+PEuW4qSYz5l2lTkeXPwXfExvLXjBkL5UBB56hTM1lY8y08i+q1/RfZ6B8RoIXDNnI7IZDB37UZyqfg+9QmCn78KRVUHCkiFQFZk1OnTMN54C7O9HUkC9z+dT+Sb/4Li9mSJxC4cBdzHzsJobsHcvQchBK5FC4j82424bPE4x2ySJKFMrUfE4ph7GpA8Xryf/gSBz30GWVUL+qkzpiPSaVBVIt/9Jr5lS7ORPaCoKurihbD0BEIXfRRZVZFUFffxi1D8/hEYcDhGfJ+H+ogvSB1U81a06j0XORq5eRPDaUsmZH1HwF0/eUT61/v6yGx7E7xevMfNQ1WHV6xMXSe9ZVu21H/uHNzh0LBSjHMOsox7Ut2w52ABpmFk17UuIkQPgZA4Mhjt6APg4JtsmKDIQwsxbaCOVGqfP0gjTmf8B7Im79Q3/9wOp1+xolPLyvqnNnOO4nbEA1Dr7ESJRAYc7JHSVZaV5QVFHplRbdP8TmDPB8I7peIOt+/hnoMdmefPITkKm3xEsx3Qt+0ttIMHs+YrnaFn7VNkmprzqj7ysiSKgngn8Mk59rSsdz5+PlMdxrkOOae/9xyEQMgylqIM/ZEBWncPPY+txYjHSwB8r1uwdhyZrh4AYk+sJXnpFfR/8Wu5LIDkDKLW1ET3z/6b2J8exRwOJ7JMOpkklUggRmKfHAAMScLMpb2GBVaOpYxc/xH72ueQSJBOJoufQy4TE3/uL3T+5L9INuwtAJ+uacS+cz2Jiy8ndu+anGNpjloAHrm54NwvX50wHisWyd7nHTsRbhfayxtIv/gyrhVngsg6633f/j7a/Q+SCQaxmlsIf+FzyHl+oZAk4vfdT+zmWxEIApesJPy5z2QXLhpk4kxJIvHYE8QeX4vi8xP+54vwHb94aI45t9/0Kxvou+9+rHSG0DkrCJy7YugvWwh00yR+y+9J3f8gQpYJXX0VIbsmMc/fi9//ILGvfgN6eul/4UVcf7wDVyCQnTLw+lbSa59CcrvRtr+drQ4axSb6iC9GcPl8uHy+bOQ3pgbJEiBZmE0t2YhYlsm0d6C/vgWpogJ0neTvbsP9T+fjHzsmyw6KQmrbG8Su/R4iFgNVJfGt68DnI/LJKwbW2bMBcO8aYl/+OpKZXWKj79En4O7b8B+/aMCEWlaWzV7eQO8nrsLsaEeSVfofeBh+/QtCF19Y0NeSZWJ33Uvy29cj+bygG8Sv/S7qrBn4j53t9NUSSVK3/B4yGeTqKoztO4jt2Uv5/LkIQGnvQEpnsGQZ19gxA8UKJRP83koxEhA883SUGdPB58M9f65z813hEHJ1FSKdRvJ5MXv7EJ1dhX7Tzl0QTyBFwtn5Hi43xtqnssC2zaYso1kWqdUPZFciiESQK8qx2ttJ3PXHQiE6xzrJO+/G6uhALitHioTBNEncdz+6aRbsF9PEfOQxJK8nW2kdCSGSKTJ7ciY29+w5s68Pq6sbyetFaBpKMISnqsKRXcSMaVBViVI7Fv8F52XvgSyXAPjenmV2ID3jawnfeSvh1XfhX7TAAZjq9+O58uPZQKSjE++MabgmHlMAFM/s2UiRMCKRRCBl51zYkXVefleSQPF6c7V6ecfPe5JSwW/DLoO3La1lIXvc2VUO8ldOkCTweBAZLZthS6aQAgG806fljpHt76qqxDV3Tjb/nU7ju/Jy/LW1jq/rnjqF8Ko/EP7jHXimTfkbhOcjNtgcRW3Yua+WMIQQfY8/KTp/8l8iM3gOr2UJSwjR97s/iOb6WeJQzUTRPOs4EX/2L9k6ELt6JPcee2ytaKytF43RGtEYqRHNtfUi/tQzQ/paQojEU8+I5vFTRGNkTHZe8PgpIvbEU4VVKbm+8T8/L5pnLRCNNRNE0+SZoud3f8jWqQyqsNGamkXHTT8XvfeuEYZuFK3CGfF+jKI2+h5YbU+VLJKZyL+Q4bIl6bd3kt65C/fsmQSmTCkahZqSRPLPz5N54CEE4P/o+fhPO2XYICT59HMkH3wYoSj4L1lJ4CMfHnbdvtSeBtJvbcc1pR7/7FlFTdCI1wEDVd+Kwmhvo/KJ6YJhqp7fSbz9G+du2MtjKMMdLw+EZn5U94/ONRlJVC+2bk0JgP83wrSQJOIvrEcR4DtpWVFGGjZ9NRikwy1gNDhbke+Hvlt93+n4llX4dKM8QVxIEslXXwNFwb9wwcgrpJaCkHcZgID+9m56L7yMxH1rhpSzm5KEZprDi8x2X9t0jfTbGzSl8nA0y3fsezjHz4ngOgIjP61n/wAfeZy+T34ODHPUSzCjC4CShCwE4U9dgXrih+j/xnfINOzLLb8hMFNp+q//Ad3/dCmxe+7DtJlmcLpOlhGAaZvpYUDgMJTdb7i0mT0LLr/vCPs0ZRlTiIHjF8mCxB5fS+dFH6Pvq9cMzPOQJIyeXhLfuR7vBefiP2Hx37Y6VkmIfhcyI5aFqqqEfng9PWedT/rV1/DWT8o+xnTnLpK/uw00jf71L2Ilk4Sv+lQ2G2L77vE4/b/4H6zNW7FmzyDyhc/iqa0tOolcS6aIb9yUXdFgwXzcoVBxH06W0fr6Sby+BUlRCC48DtWuyxsEvkxzC/233Iqx7S3UhfMo+9qXUe2VXHP7ij/8KLHPfxkMg7RhIK04g/KzzgCgf8OrSNVVBK+9ZtSb3tEpw+RLKqsfEMntO5zNmY5O0bLsFNFUM1E0jpssWpaeLPTevuyHhiEsIUTPLbeKxkClOFR1jDgUrBRtZ50vtM6ugaXRHBmkSbSuvEwcGDdJHBxfL5pPP0ck33irqByS3PamaD31bHGwdrI4NG6yaLv4cpHJX/Yt1y/d1i5azjxPNAWzx28MVIr23/w2K+0YWalFy2ii9fyLRFP1MaKptl40z5wvknsanGtMHTwk4kWWaxvNbfTxd275iuDFF+KbOcMxg67KCkLf+DpSMIjo6c1WReUvpwuYvX2gKCjhEEp1NfqG14g/9xeEvYyalZ1o1P3wo1hrn0J1uVBkBfPlDSTyl3zLe5Rr4t9/gr7hNRRFRVZVtLVPkXj4kYHshj0h6fl1mC+/CtXVKOEQuFwYPT1DmVJYWH2xrKTz7Wvw1k92juc9ZjyB/KdDHQVNHZVnLUlZ02o76bmFgvznn4M0cQLa2qdwnXQicjTimDYZCK38J/QHHsZ8eydCzT4uQa2uKpAzJMA9dgxpjxcyedmSdHroEhlCIFKpgWAgt2yuXF01JChRKyvB68Hq7QXDwDVtKtFLLx5IpQmBy+Mm9P3vkVnyIdTlJxFYckKhqRVi5DWoSzLM+x8p2xrZEBE3F0VmGvbRf/udSIeacJ99JuGLLyx86qQQWIZB789+SWrV3UiZDMr48UR/8iM8RYoRki9voO/a70FTM8LnwffxjxH9+leQXa6BpxHlHhkWu/9hzCeexBw/jtCVV+CdWl+Uzd5xremjqB1dALSjUnvB8sHZkhwIeadMA2AA+qFG1FgMq7YWTyQ87CHTvb3ITS2Y4RDuY8ajjCCg5wOsaCBh5NaMUZVRH+F+MAEII69uL/Kf7ztC+f7g7w0neeQeITHs//ObXThq71c+urMcR5cOeJjNTKboXvMAvc/9BcNmwiFXLWfFYOUdSvPtFa+G249NoaY50FcagZkVJfsaJlVoSRKxl16h88670fr6CmmzBMBR4P8BZiyG/tNfEDv/oqyQm0wOmTRkCIHW1U1G04bNmojcKlZCVRGD52YM1icVJWvuR5ilJmQZTdMwurrRhwQW2Qdb933/h/SddT7c/1C2zMtZ6fTobepRcyW5DIS7pprw6lXEv/N9kr++GcaMoex71yLnKqMz3T30fff76Bs3QU01kU98nEB+WbydsejsInbPvdDYjJhcR+jiC3FVVAx5QLbW3U18zUMoBw5ijh1L8LKLcVcW9rMkif4HHiZ5251Ibe2oxy8i8oPrcVeUZ4MZRaHvD3eQ/OnP8X7ty0S/d21WzP4ABCHqUXU1uQH319Xhuv139NdPRu7sLOAQbU8D+h9XZ9dzOdhI32uboaKC4KnLnbSaAPq/ewPJu+6BQAApncH86wtE/3AzLnvxcVlCj8Xo+/xX0J56NruOdSIJb71F9OZfZU1Lzm/sf/Y5Ev/vqwOR+J4Gkpddgju38LkAtFiM8G/+G/8nryj6MO4SAEcTCC0Ll9tN2Q+/D5qWBUNOawvMPRbjs58mec99oOvgUpGLVDuLoD9rWiUJgcDYtx8yGbCZCQkzmcRoaMg+y1OSEIqMGJyGI/t0c1wqQtORFBX/1VcQshcez2mUlV/7EhLZfHdBoFKKgke3T1isXMu0LNKvvEaqoQHv5En4l35oYGaZ/cCaWIz4PasR295A+H14LrkI/+KFQ0x1YuMmMn9cA/EEYt4cwp/4GK5BT+q0gMSG10ju3kNg8mR8S44vvpD5UVBcUALgO8kp+cz0DlHYEN1umD75wvdIvHVYC6x/wNrRD0BGkEVsZA33ZM18BhW5f4qsVDBkBYVhn4A5wvFKACy1IZpiRkNracGQJDxjx+DOLYKe33RdR2tqRpIk3GPHoBbpU2ofBB3w3QafadL7b/9Bz2nn0HfyWXSddg6xrdvsDwFIbHuT7tPOpveUFfSedT49P/gPzFG8TEYpCj6SfpmyjOfjl+E7+SNoHZ0YiURWB8wzsa7KcpRPXI6/rAypqhJpTE12qY9SK5ngdzWOyQsy/pbPSq3EgP94BC0Ekh2ADM7hCpFdV8Z+duvhrA1YaiUGLLVSEFJqpVYCYKmVAFhqJQCWWqmVAFhqJQCW2uAmcpXKJaHgvWvq0QASIXL1eLm/gewKpbnP7c+kwTPictvtv/M/tywLWZadbfb/S+3dbSUdcBhQS5LEoUOH2Lp1K8cffzzV1dVFQfxu/5A+aCAftQxoM9IzzzzDunXr8Pl8NDY2UlZWRldXF4lEAlVVGTNmDKqqous6LpeLvr4+vF4vHo8HIQThcBhN07j66qupqqpy9nvHHXdw4403MmHCBDKZDDfffDPz5s1710E4HAOXfMBR0lpbW2lvbycej7N7925eeeUVXn75ZTZt2kRLSwtvvvkmDQ0NJBIJ+vv7yWQyBINBPB4PPT097N+/n40bN7Jnz57sDZFlDhw4wLe+9S1mzpzJsmXLUFWV733ve+9JpYsNvK1bt3LvvfeWADgazeWOHTvYv38/U6ZM4cQTT2TevHl4vV46OjpQFIVUKkVHRweRSITa2lr6+vrYvn07J598Mp/+9KeJRqMkEglnny0tLdTW1rJw4UK2b9/O8uXL6ejowLKsAr/xH2VwgBdeeIGvfvWr3H777dx5553O9pIJHiVtwoQJLF68GI/Hwy233MLChQtpaGigvLyck08+mUwmg8fjIRQKoes6sViM+vp6TNPk97//PWeddRY7d+4kGo06wJg3bx5Tp05l27ZtTJs2jQcffJCPfvSjuFyudy0YsUG8YcMGHn/8cU455RQikcgHLuIetQC0QbB8+XKWL18OwNatW9F1HbfbzVVXXcXVV1897Pfb29v52Mc+Rl1dHZMnTyadTjsA9Pl8/PjHP+a6667j5Zdf5uMf/zhf+tKXCqLrkWSbYuc5OBK3+3o8HiZMmEBNTQ2xWAxN0/B6vQV9j2bf8KiQYUzTRJZl0uk0uq4jhCAWi2Ga5hA5xR5YwzBIp9O0trai6zrBYDB7Q3ILGk2YMIE77rijqM82nDmVZRllhEcn5H/XPs7EiROZM2cOvb29pFIpfD7fUQ+6owqAkiQhy7Iz+C6XywGUDYZ8UNgArKio4NRTTyUSiXDuuecyefJkADo7O2ltbUWSJFwuF5lMBtM0mTFjBl6vd9hoHKCpqYlNmzbR2NiIaZpMnz6dxYsX4/f7HYnFNuP79u1DCMGmTZvo7+9nwoQJbNmyhTfeeAOv14uiKAghCAaD1NTUlAB4pIMQshOEFEVh3LhxqKrqMGAxUdrj8XDjjTcO8ckeeugh7r//fkzTxO/3k06nOXjwIL///e858cQTMU3TAbQNvh07dvDjH/+YZ555hmQySUWudL+vr49x48bh9Xo566yz2LdvH6eccgof/vCHueSSS5g8eTJ9fX3MnDmT+vp69u3bx/XXX4/H46G7u5tdu3Zx3HHHcc899+Dz+d5THbIEwHehud1ufD4fiqIgSRKKooxoEvOjWntgq6urOfPMMwkGg7S3tzNnzhxuuOEGJ0oenBl56aWXOOecc4hGo5xzzjmkUilcuVVV3W43sViMdevWsXv3brZu3cr48eM555xzuPzyy6mrq6Orq4toNMqCBQswDANVVWlpaUHXdY499lhCoZBjro9Gs3xUAdDr9bJo0SL27dvHo48+SjweJ51Oo6oqhmEA4Pf78fv9XHLJJYRCIWdgbTBu2LCBzZs3M2vWLF566SWCwSDRaNT5vh08yLLMhg0bOOecc5gxYwZ1dXU89thjqKpKZWUlqVTKAdepp55KZWUlW7dupby8nN7eXtauXYuqqkyfPp2TTz6ZtrY2Vq1ahWEYdHd3U1FRgSRJRCIRR0QvMeAR3srLy7Esi8WLF/Pkk0/y0ksvYRgG/f39lJeX8+abb1JeXk5dXR0rVqwgFAo5g2r7cd/4xjfo7e3FMAy2b99OT08PlZWVDpPavlxfXx+f/exnWbp0KaFQiHvvvZfrrruOq6++moqKCizLoqWlhX//93/nvvvu44477mD9+vVkMhnq6+u56aab8Pv9PP3007S1tZFMJolGo3zve99zzsuyLKLR6FEdmBxVPmAikcDtdjN9+nT279+PoihYlkVTUxPJZJL6+nrHsXcPM4G8rKyMsrIykskkqVSKMWPGsHfvXgegNmAfeOABAGbPns1vfvMbbr31Vj7zmc8U7Ku+vp7f/va39PT0sHnzZurr66msrESWZebPnw/Axo0beeutt5g2bRpz585l4cKFHygd8KjIfNsBRDQaxe12s2rVKrZt24YkSfT29tLd3U1fbsXRvr4+x9cazi+0LItkMokQgmQyyfbt2x0A2u9PPPEEM2fOZO3atZx99tl85jOfwTAMp3zLlofsyPzQoUOccMIJjuCt6zqWZeF2uwmHw6iq6qQK7XP4IJSCHVUm+Nhjj3V0wAsvvJCrrrpqxMyFPbiDRd/8V1lZGStXriwAoJ3aO/7449m0aRMrV64cYsoHi8+yLLNu3TpOOeWUApG6tbWVjo4ONE1j69atuFwuZFkuAJ7tn5ZM8BFsgi3LoqysjLFjx9La2kowGCwYxMF/54vTxVomk6G3t5fe3l727dvHvHnznGO1t7fT19dHNBrFsiyqqqqKAsTe9qMf/QjTNEmn05SXlxe4DXaUfPHFF1NTU1M0+1HKhIwCE2xXlOi6TllZmSPFDC5Qzf+7u7sbRVHQNI1IJFLgF7pcLnw+n1NFEwgECoIdj8dDLBZDlmVHbxzON62vrx/2M1mWaWtr44033hjCmp2dnY5oXVVVxeTJk4+6SPioqX4UQhCNRtE0jZaWloIK6fyX7VeZpsmnPvUpbrzxRs4880zuu+8+ILsokd1X13XKy8spLy93thuGQSgUIhwO09raSjgc5umnn3aAONhnsyzLKeMq5tP5fD6nNOzgwYMFfX70ox/xu9/9jl/96le89dZbQ5i8BMAjyATbANi7dy9er5dUKuWI0fk+nW16FUWhu7sbwzDw+Xwkk0mHkSRJwu/3o6oqBw8epLGxkWAwWGBmlyxZwpYtW1ixYgWrVq1i3bp1uFwuxx2wgWSnCNPpdFHmshnY4/E45yzynkU3bdo0li5d6ojbR5s5HvUA1HWdpqYmuru72b9/P5FIhB07dtDc3ExPTw9tbW3E43F6eno4dOgQLS0tNDU1sWfPHoLBIGPGjKGqqsoRpROJBM3NzU4toQ3WgwcP0t/fT39/PwCf+9znSCQStLa2cuaZZ/LNb36TNWvWkEqlnNy0JEns3LmTP/zhD9x11110d3cPybxMnjyZzs5OvF4vbW1tvPrqqyiKwr59+/D5fJSXl/Paa68VyEAlH/AIaHZ0+8ADD3D77bc7lTDHHHMMY8aM4a9//SvNzc3s2LGDiRMnUllZSVdXF2PGjKGpqYlJkybh8XgoKyvDsixSqZRj9tasWUNlZSVtbW1MmTKFrVu38u1vf5vbb7+dyspKfv3rXzN+/HhuuukmLrzwQr70pS9x8cUXc9ttt3HnnXfi9/uprq6mo6ODrq4uFi5cyLJly3jooYc49dRTmTRpkgOkJUuWUFFRQXNzM8ceeywrV67kyiuvdOaidHR00N3dzYknnnhUMuCoBaA9EBMnTuTyyy/nwIEDTJ8+nZkzZ9Lf38/69euZNGkSc+fOBWDSpElMmjTJiW59Ph/19fXMmTOHV1991fHTZs2axfnnn09VVRWmaVJfX8/VV1/Na6+9hqqq1NbW4vF4sCyLCy64gP/93//lzjvvxDRNfvrTn/Lyyy/z6quvEg6HC5j1tddeY926dSxZsqTgRxSNRrn++uu56qqruOKKK5gwYQIHDx6krq6O+fPns2bNGs444wz8fv9ROTNv1M6Ks0XeX/3qV/z4xz+mvLyccePGsXz5crZt20ZrayuZTIYlS5bg8XhIJBIEAgF0XWfXrl2oqorf72fPnj2EQiE+85nPcMkll3DNNdfw5ptvoigKlZWVbNu2jfHjx+NyudiwYQPz5s3jkUcecVJzkiTxxhtv8POf/5yxY8eiqiqTJ0+mpaWFZDLJgQMH6O3t5fTTT+f8889nwoQJQwpTJUnipz/9KT/72c8YP368I5Jrmsall17KNddc846yUQmA75P0snfvXtavX08oFELTNAKBAMlkEp/Ph8vlQlEUqqqqOHjwIL29vbhcLmdWnG22PR4PJ510EuXl5WzevNmp1TMMA5fLhaqquN1uNE2joqKCZcuWDXEFDMNg//79bNu2jUQiQTwex+PxMGfOHGpraxk3btwQ0Xvwtbz99ts8+uijNDc3EwqFOOOMMwqOdTS20rzgd9Effac+I2UzhtvH0VgBc1QBcPA8jMGmLV/cLbZKgv23/bLlk/zPi0k+w51Lsdt5uGm0wTrhSMcqAbDUSq2kA5ZaCYClVmolAFJaRq0EwP/71t/f7xSO5utkWpHHrw7XTNN05nv8I4HQP/p9Xdc/kAAclZmQRCLBn//8ZydS7Ovrw+VyUVZWRiqVoqWlhdNOO80pwS8WgQohyGQyrFmzxpkJ9/dKHn+vTGID98knn6StrY0rr7zyA7dC1qhiQHvA+vr66O/v57zzzuPcc8/F4/E4abdkMolpmkUnkeeba0mS2LJlC5qmOasijMRkwy0alMlk6OnpGXKexZbpGNxHkiQaGhrYsWMHVVVV7wqblgD4HjabHcaNG8c555yDaZp0dnYihGDx4sVOmu24446jtra2YFJ6/sDbZfXbt29HURTmz59fsDhkfqk+4FSpDP7MXgKkpaWlAHCSJPHKK68Qi8WKAi8fZK+//jper5eTTjqpQC8cDMSjFZij1geMRqMoisL27dupq6sD4E9/+hO1tbUsWbLEAdRwA7lx40b27dvHBRdcQCAQGLZ6Op1O8/zzz5NIJIYI3pIkUVlZyaxZswpqEnfu3MmmTZuc5TUG/4js/be2tvLiiy9y8sknO6lE2xccDERJko7KJ3GOWgDaPlxTUxPz5s2jqamJgwcP4vf72bRpE5IksXHjRm6//Xa6u7sLzB7AK6+8wuTJk9mwYQMAb7/9Nn/4wx/o6Ohgx44dPPnkkwC89NJLPPXUU2iaRiaTcbIlNjNu3LgR0zR5+OGH2bx5M7Isc8stt5DJZGhubi4AtmmaPPHEE7z88stIksRzzz3H/PnzmTlzJlu2bOGhhx5yFkTq6OjgwQcfdI71yCOP0NTUVALgkQI+O3lfVVWFEIJrr72WSCTCzJkz6e7uZuPGjaxduxaPx+PM2bC/t2bNGioqKqitraWpqYk333yThx56CLfbTWdnJ2vWrEHXdceUnnvuuaxYsaIgtReLxbjpppsIBAL85S9/IRwOU19f71TSfP3rX6e+vr6ANZ966im8Xi8zZ85k586d7N27l09+8pO89NJLHDp0iKlTpxIKhTBNk7vvvtspil2/fj3r168nGo06RRIlAB4Bbe/evSxcuJDe3l7Kysr4whe+gGEYhMNhnnnmGU4//XTmzZvHtm3bCvzBWCzGKaecgqZp7N+/n/vuu4+FCxeyfPlydu/ezRlnnEFVVRXr169H13VOPfVUXnzxRfbt2+cAsKmpiZkzZ9LS0kJbWxunnHIK8XicJ598ktNOO43e3l6eeOIJTNNEkiRaWlpIp9Occsop6LrOqlWrOOOMM9i0aRNbt27lvPPO48UXX+Skk07i2WefZdmyZcyZM4eNGzeSSqW4+OKLaWxs5IknnvibZKYjvSk33HDDDaOR/VpaWujo6GDu3Lns2bOH6dOnM23aNB555BGn4LSqqoo9e/ZwwgknFCzDoWkaDQ0N6LrOggULkCSJcePG8eKLL+LxeIjH46xbt47p06czduxYXnvtNTweD4sXL3YAmEwm2bVrFz09PQQCATo6OmhoaGDp0qXs3buXhoYGFi9e7EzD7O/vp6GhwVn1at68ebS0tLBz507C4TD79u3jwIEDdHV10d7eTnl5Oc899xzNzc1MmTKFdevW0draypIlS97zFfv/TwPL0VqMkEqlEELg9/tpa2sjEAgQCATYtWuXs5bL3r17mTt37pBVEDKZDJs3b2bKlClUVVWRSCTYuXMnU6ZMobm5md27dzNnzhzq6uqIx+M0NTUxffr0IcffvXs3c+fOZdeuXaTTaebMmeNIK2VlZQ747LZr1y6SySRz5sxBURR27dpFfX09b7/9tiMF2TWNGzdupL6+nkmTJjkV20uWLHHWGjxa9MIPRDXMSAP2Tisn/K0DXazU6//qWkoAfJ+ANVz93kgPfskvEM2vFczf73DSTLHjDyedFJOAii2Y+U5AHizhlABYaqX2QY+CS60EwFIrtRIAS60EwFIrtRIAS60EwFIrtRIAS230tP8PA+/bwN2K9JoAAAAASUVORK5CYII=" alt="EICT logo">
         <div>
           <div class="brand-name">EICT Online</div>
-          <div class="brand-sub">50-Day Mission · v1.3.1</div>
+          <div class="brand-sub">50-Day Mission · v1.3.2</div>
         </div>
       </div>
       <nav class="navlist" id="navlist">
@@ -2898,7 +2906,7 @@ function formatMins(mins){
   const PYA_LS_KEY = 'pyArenaData_v1';
 
   function pyaLoad(){
-    const defaults = { totalPoints:0, gamesPlayed:0, muted:false, best:{quiz:0,puzzle:0,bug:0,tagmatch:0,stylesleuth:0,buildlive:0}, bestStreak:0 };
+    const defaults = { totalPoints:0, gamesPlayed:0, muted:false, best:{quiz:0,puzzle:0,bug:0,tagmatch:0,stylesleuth:0,buildlive:0,topology:0,subnet:0,protorush:0}, bestStreak:0 };
     try{
       const raw = localStorage.getItem(PYA_LS_KEY);
       if(raw){
@@ -3162,10 +3170,96 @@ function formatMins(mins){
       ]},
   ];
 
+  /* ---------------- NETWORKING: TOPOLOGY LEVELS ---------------- */
+  const PYA_TOPOLOGY = [
+    { title:'Level 1 · Star Network',
+      brief:'Connect all 5 computers directly to the switch.',
+      devices:[
+        {id:'pc1', label:'PC-1', icon:'💻', x:14, y:18},
+        {id:'pc2', label:'PC-2', icon:'💻', x:14, y:50},
+        {id:'pc3', label:'PC-3', icon:'💻', x:14, y:82},
+        {id:'pc4', label:'PC-4', icon:'💻', x:86, y:18},
+        {id:'pc5', label:'PC-5', icon:'💻', x:86, y:82},
+        {id:'sw1', label:'SW-1', icon:'🔀', x:50, y:50},
+      ],
+      required:[['pc1','sw1'],['pc2','sw1'],['pc3','sw1'],['pc4','sw1'],['pc5','sw1']] },
+    { title:'Level 2 · Internet Gateway',
+      brief:'Connect the 3 PCs to the switch, then connect the switch to the router so the LAN can reach the internet.',
+      devices:[
+        {id:'pc1', label:'PC-1', icon:'💻', x:12, y:20},
+        {id:'pc2', label:'PC-2', icon:'💻', x:12, y:50},
+        {id:'pc3', label:'PC-3', icon:'💻', x:12, y:80},
+        {id:'sw1', label:'SW-1', icon:'🔀', x:45, y:50},
+        {id:'r1',  label:'R-1',  icon:'📡', x:78, y:50},
+      ],
+      required:[['pc1','sw1'],['pc2','sw1'],['pc3','sw1'],['sw1','r1']] },
+    { title:'Level 3 · DNS & DHCP',
+      brief:'Wire the 2 PCs to the switch, add the DNS and DHCP servers to that same switch, then connect the router out to the internet.',
+      devices:[
+        {id:'pc1',  label:'PC-1',  icon:'💻', x:10, y:22},
+        {id:'pc2',  label:'PC-2',  icon:'💻', x:10, y:78},
+        {id:'sw1',  label:'SW-1',  icon:'🔀', x:36, y:50},
+        {id:'dhcp', label:'DHCP',  icon:'🏷️', x:60, y:15},
+        {id:'dns',  label:'DNS',   icon:'🌐', x:60, y:85},
+        {id:'r1',   label:'R-1',   icon:'📡', x:78, y:50},
+        {id:'net',  label:'Internet', icon:'☁️', x:95, y:50},
+      ],
+      required:[['pc1','sw1'],['pc2','sw1'],['sw1','dhcp'],['sw1','dns'],['sw1','r1'],['r1','net']] },
+    { title:'Level 4 · Two-Department LAN',
+      brief:'Each department has its own switch. Wire each pair of PCs to its own switch, then connect both switches to the router.',
+      devices:[
+        {id:'pc1', label:'PC-1', icon:'💻', x:8,  y:20},
+        {id:'pc2', label:'PC-2', icon:'💻', x:8,  y:45},
+        {id:'sw1', label:'SW-1', icon:'🔀', x:32, y:32},
+        {id:'pc3', label:'PC-3', icon:'💻', x:8,  y:70},
+        {id:'pc4', label:'PC-4', icon:'💻', x:8,  y:95},
+        {id:'sw2', label:'SW-2', icon:'🔀', x:32, y:82},
+        {id:'r1',  label:'R-1',  icon:'📡', x:68, y:57},
+      ],
+      required:[['pc1','sw1'],['pc2','sw1'],['pc3','sw2'],['pc4','sw2'],['sw1','r1'],['sw2','r1']] },
+  ];
+
+  /* ---------------- NETWORKING: SUBNET SPRINT QUESTION BANK ---------------- */
+  const PYA_SUBNET_QUIZ = [
+    {q:'What is the network address for 192.168.1.77/24?', o:['192.168.1.0','192.168.1.255','192.168.0.0','192.168.1.77'], a:0, e:'/24 means the first 3 octets are the network portion, so the network address is 192.168.1.0.'},
+    {q:'What is the broadcast address for the 192.168.1.0/24 network?', o:['192.168.1.1','192.168.1.255','192.168.0.255','192.168.1.0'], a:1, e:'The broadcast address sets all host bits to 1, giving 192.168.1.255 for a /24.'},
+    {q:'How many usable host addresses are in a /24 subnet?', o:['254','256','255','128'], a:0, e:'256 total addresses minus the network and broadcast addresses leaves 254 usable.'},
+    {q:'Which of these is a private IP address?', o:['8.8.8.8','172.16.5.10','1.1.1.1','203.0.113.5'], a:1, e:'172.16.0.0–172.31.255.255 is one of the three private IPv4 ranges (RFC 1918).'},
+    {q:'What subnet mask corresponds to a /26?', o:['255.255.255.0','255.255.255.192','255.255.255.224','255.255.255.128'], a:1, e:'/26 leaves 6 host bits, which works out to a mask of 255.255.255.192.'},
+    {q:'How many usable hosts does a /26 subnet provide?', o:['62','64','30','126'], a:0, e:'A /26 has 6 host bits, so 2^6 minus the network and broadcast addresses gives 62 usable hosts.'},
+    {q:'Which protocol automatically assigns IP addresses to devices on a network?', o:['DNS','DHCP','HTTP','FTP'], a:1, e:'DHCP (Dynamic Host Configuration Protocol) leases IP addresses to devices automatically.'},
+    {q:'Which protocol translates domain names like example.com into IP addresses?', o:['DHCP','ARP','DNS','NAT'], a:2, e:'DNS (Domain Name System) resolves human-readable names into IP addresses.'},
+    {q:'Under classful addressing, which class does 10.0.0.1 belong to?', o:['Class A','Class B','Class C','Class D'], a:0, e:'Addresses from 1.0.0.0 to 126.255.255.255 belong to Class A.'},
+    {q:'What is the default subnet mask for a Class C network?', o:['255.0.0.0','255.255.0.0','255.255.255.0','255.255.255.255'], a:2, e:'Class C networks default to a /24 mask, or 255.255.255.0.'},
+    {q:'Which address always refers back to the local machine itself?', o:['0.0.0.0','127.0.0.1','255.255.255.255','192.168.0.1'], a:1, e:'127.0.0.1 is the loopback address — it always points back to the local device.'},
+    {q:'A device has IP 172.20.5.9/16. What is the network address of its subnet?', o:['172.20.0.0','172.20.5.0','172.0.0.0','172.20.255.0'], a:0, e:'/16 keeps only the first two octets as the network portion, giving 172.20.0.0.'},
+    {q:'Which of these is NOT a valid IPv4 address?', o:['192.168.1.256','10.10.10.10','172.16.0.1','8.8.4.4'], a:0, e:'Each octet must fall between 0 and 255 — 256 is out of range.'},
+    {q:'What does NAT let multiple devices on a private network do?', o:['Share a single public IP address','Get random MAC addresses','Skip DNS lookups entirely','Encrypt all traffic automatically'], a:0, e:'Network Address Translation lets many private IPs share one public IP when reaching the internet.'},
+  ];
+
+  /* ---------------- NETWORKING: PROTOCOL & LAYER RUSH QUESTION BANK ---------------- */
+  const PYA_PROTOCOL_RUSH = [
+    {q:'Which port does HTTP use by default?', o:['21','25','80','443'], a:2, e:'HTTP listens on port 80 by default.'},
+    {q:'Which port does HTTPS use by default?', o:['80','443','22','53'], a:1, e:'HTTPS (secure HTTP) uses port 443.'},
+    {q:'Which port do DNS lookups use?', o:['53','67','110','143'], a:0, e:'DNS queries travel over port 53.'},
+    {q:'Which ports does DHCP use?', o:['20 / 21','67 / 68','110 / 995','25 / 587'], a:1, e:'DHCP servers listen on port 67; clients listen on port 68.'},
+    {q:'Which OSI layer is responsible for routing between networks?', o:['Data Link','Network','Transport','Application'], a:1, e:'The Network layer (Layer 3) handles logical addressing and routing.'},
+    {q:'Which OSI layer handles reliable end-to-end delivery, like TCP?', o:['Physical','Network','Transport','Session'], a:2, e:'The Transport layer (Layer 4) manages segmentation and reliable delivery.'},
+    {q:'Which device operates primarily at Layer 2 (Data Link)?', o:['Router','Switch','Firewall','Modem'], a:1, e:'Switches forward frames using MAC addresses at Layer 2.'},
+    {q:'Which device connects different networks and routes packets between them?', o:['Switch','Router','Repeater','Access Point'], a:1, e:'Routers forward packets between different networks using IP addresses.'},
+    {q:'What does DNS stand for?', o:['Domain Name System','Digital Network Service','Data Naming Standard','Dynamic Name Server'], a:0, e:'DNS stands for Domain Name System — it translates names into IP addresses.'},
+    {q:'What does DHCP stand for?', o:['Dynamic Host Configuration Protocol','Direct Host Control Process','Domain Host Config Protocol','Dynamic Hardware Control Panel'], a:0, e:'DHCP stands for Dynamic Host Configuration Protocol.'},
+    {q:'Which protocol is connectionless and does not guarantee delivery?', o:['TCP','UDP','FTP','SMTP'], a:1, e:'UDP sends data without establishing a connection or guaranteeing delivery.'},
+    {q:'Which protocol sets up a connection first and guarantees reliable delivery?', o:['UDP','ICMP','TCP','ARP'], a:2, e:'TCP performs a handshake and guarantees ordered, reliable delivery.'},
+    {q:'What does a MAC address identify?', o:['A physical network interface','A website domain','An IP subnet','A DNS server'], a:0, e:"A MAC address is a hardware identifier built into a device's network interface."},
+    {q:'Which protocol maps an IP address to a MAC address on a local network?', o:['ARP','NAT','DNS','DHCP'], a:0, e:'ARP (Address Resolution Protocol) resolves IP addresses to MAC addresses.'},
+  ];
+
   /* ---------------- STATE ---------------- */
-  let pyaGame = null;      // 'quiz' | 'puzzle' | 'bug' | 'tagmatch' | 'stylesleuth' | 'buildlive' | null (hub)
+  let pyaGame = null;      // 'quiz' | 'puzzle' | 'bug' | 'tagmatch' | 'stylesleuth' | 'buildlive' | 'topology' | 'subnet' | 'protorush' | null (hub)
   let pyaSession = {};
   let pyaCurrentCat = 'python';
+  let pyaTopoSelected = null;
 
   const PYA_CATS = [
     { key:'python', label:'🐍 Python', cabinets:[
@@ -3181,6 +3275,11 @@ function formatMins(mins){
     ]},
     { key:'combo', label:'🧬 Mixed', cabinets:[
         {mode:'buildlive', color:'c-pink', icon:'🛠️', title:'Build It Live', desc:'Drag scrambled HTML & CSS lines into order — watch your build render live as you go.', bestKey:'buildlive'},
+    ]},
+    { key:'networking', label:'🌐 Networking', cabinets:[
+        {mode:'topology',  color:'c-pink',   icon:'🖧', title:'Topology Builder',      desc:'Wire up PCs, switches, routers, DNS & DHCP servers into a working network across 4 levels.', bestKey:'topology'},
+        {mode:'subnet',    color:'c-cyan',   icon:'🔢', title:'Subnet Sprint',         desc:'10 timed questions on IP addressing, subnetting, CIDR and private/public ranges.', bestKey:'subnet'},
+        {mode:'protorush', color:'c-yellow', icon:'📡', title:'Protocol & Layer Rush', desc:'Match protocols, ports and OSI layers before the clock speeds out of control.', bestKey:'protorush'},
     ]},
   ];
 
@@ -3264,6 +3363,9 @@ function formatMins(mins){
         if(mode==='tagmatch') pyaStartTagMatch();
         if(mode==='stylesleuth') pyaStartSS();
         if(mode==='buildlive') pyaStartBuild();
+        if(mode==='topology') pyaStartTopology();
+        if(mode==='subnet') pyaStartSubnet();
+        if(mode==='protorush') pyaStartProtoRush();
       });
     });
   }
@@ -4066,6 +4168,458 @@ function formatMins(mins){
     `;
     document.getElementById('pyaBuildAgain').addEventListener('click', pyaStartBuild);
     document.getElementById('pyaBuildHub').addEventListener('click', pyaGoHub);
+  }
+
+  /* ================= TOPOLOGY BUILDER (Networking) ================= */
+  function pyaStartTopology(){
+    pyaGame = 'topology';
+    pyaSession = { levels: PYA_TOPOLOGY, idx:0, score:0, edges:[], attempts:0, timeLeft:0, timeLimit:0, timerId:null, checking:false };
+    pyaTopoSelected = null;
+    pyaEnterGameScreen();
+    pyaLoadTopoLevel();
+  }
+
+  function pyaClearTopoTimer(){ if(pyaSession.timerId){ clearInterval(pyaSession.timerId); pyaSession.timerId = null; } }
+
+  function pyaEdgeKey(a,b){ return [a,b].sort().join('|'); }
+
+  function pyaLoadTopoLevel(){
+    const s = pyaSession;
+    if(s.idx >= s.levels.length){ pyaEndTopology(); return; }
+    s.edges = [];
+    s.attempts = 0;
+    s.checking = false;
+    pyaTopoSelected = null;
+    const lvl = s.levels[s.idx];
+    s.timeLimit = 20 + lvl.required.length * 12;
+    s.timeLeft = s.timeLimit;
+    pyaRenderTopoLevel();
+    pyaClearTopoTimer();
+    s.timerId = setInterval(()=>{
+      s.timeLeft -= 0.1;
+      const fill = document.getElementById('pyaTopoTimerFill');
+      if(fill){
+        const pct = Math.max(0, (s.timeLeft/s.timeLimit)*100);
+        fill.style.width = pct+'%';
+        fill.classList.toggle('low', s.timeLeft < s.timeLimit*0.25);
+      }
+      if(s.timeLeft <= 0) pyaClearTopoTimer();
+    }, 100);
+  }
+
+  function pyaRenderTopoLevel(){
+    const s = pyaSession;
+    const lvl = s.levels[s.idx];
+    const dots = s.levels.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaTopoBack">← Arena</button>
+        <div style="color:#fff; font-weight:700; font-size:13px;">${pyaEsc(lvl.title)}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <div class="pya-timerbar-track"><div class="pya-timerbar-fill" id="pyaTopoTimerFill" style="width:100%"></div></div>
+        <p style="color:var(--pya-ink-dim); font-size:12.5px; margin:0 0 12px;">${pyaEsc(lvl.brief)} Click a device, then click another to connect or disconnect them.</p>
+        <div class="pya-topo-stage" id="pyaTopoStage">
+          <svg class="pya-topo-svg" id="pyaTopoSvg" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+        </div>
+        <div id="pyaTopoMsgWrap"></div>
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaTopoReset">🧹 Reset</button>
+          <button class="pya-btn-secondary" id="pyaTopoCheck">✅ Check Topology</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaTopoBack').addEventListener('click', ()=>{ pyaClearTopoTimer(); pyaGoHub(); });
+    document.getElementById('pyaTopoReset').addEventListener('click', ()=>{
+      s.edges = []; pyaTopoSelected = null; pyaRenderTopoNodes(); pyaRenderTopoEdges();
+      document.getElementById('pyaTopoMsgWrap').innerHTML = '';
+    });
+    document.getElementById('pyaTopoCheck').addEventListener('click', pyaCheckTopology);
+
+    const stage = document.getElementById('pyaTopoStage');
+    lvl.devices.forEach(d=>{
+      const node = document.createElement('div');
+      node.className = 'pya-topo-node';
+      node.dataset.id = d.id;
+      node.style.left = d.x+'%';
+      node.style.top = d.y+'%';
+      node.innerHTML = `<div class="icon">${d.icon}</div><div class="lbl">${pyaEsc(d.label)}</div>`;
+      node.addEventListener('click', ()=>pyaTopoNodeClick(d.id));
+      stage.appendChild(node);
+    });
+    pyaRenderTopoEdges();
+  }
+
+  function pyaTopoNodeClick(id){
+    const s = pyaSession;
+    if(s.checking) return;
+    if(pyaTopoSelected === null){
+      pyaTopoSelected = id;
+    } else if(pyaTopoSelected === id){
+      pyaTopoSelected = null;
+    } else {
+      const key = pyaEdgeKey(pyaTopoSelected, id);
+      const existingIdx = s.edges.findIndex(e=>pyaEdgeKey(e[0],e[1])===key);
+      if(existingIdx>=0) s.edges.splice(existingIdx,1);
+      else s.edges.push([pyaTopoSelected, id]);
+      pyaTopoSelected = null;
+    }
+    pyaRenderTopoNodes();
+    pyaRenderTopoEdges();
+  }
+
+  function pyaRenderTopoNodes(){
+    document.querySelectorAll('.pya-topo-node').forEach(n=>{
+      n.classList.toggle('selected', n.dataset.id === pyaTopoSelected);
+    });
+  }
+
+  function pyaTopoNodePos(lvl, id){
+    const d = lvl.devices.find(x=>x.id===id);
+    return d ? {x:d.x, y:d.y} : {x:50, y:50};
+  }
+
+  function pyaRenderTopoEdges(colorMap){
+    const s = pyaSession;
+    const lvl = s.levels[s.idx];
+    const svg = document.getElementById('pyaTopoSvg');
+    if(!svg) return;
+    let html = '';
+    s.edges.forEach(e=>{
+      const a = pyaTopoNodePos(lvl, e[0]);
+      const b = pyaTopoNodePos(lvl, e[1]);
+      const key = pyaEdgeKey(e[0], e[1]);
+      let stroke = 'var(--pya-cyan)';
+      if(colorMap){
+        const c = colorMap[key];
+        if(c==='correct') stroke = 'var(--pya-green)';
+        else if(c==='extra') stroke = 'var(--pya-red)';
+      }
+      html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${stroke}" stroke-width="1.4" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`;
+    });
+    if(colorMap && colorMap.__missing){
+      colorMap.__missing.forEach(key=>{
+        const [ida, idb] = key.split('|');
+        const a = pyaTopoNodePos(lvl, ida);
+        const b = pyaTopoNodePos(lvl, idb);
+        html += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#8a94c0" stroke-width="1" stroke-dasharray="3,3" vector-effect="non-scaling-stroke"/>`;
+      });
+    }
+    svg.innerHTML = html;
+  }
+
+  function pyaCheckTopology(){
+    const s = pyaSession;
+    if(s.checking) return;
+    const lvl = s.levels[s.idx];
+    const requiredKeys = lvl.required.map(p=>pyaEdgeKey(p[0],p[1]));
+    const currentKeys = s.edges.map(e=>pyaEdgeKey(e[0],e[1]));
+    const missing = requiredKeys.filter(k=>!currentKeys.includes(k));
+    const extra = currentKeys.filter(k=>!requiredKeys.includes(k));
+    const colorMap = {};
+    currentKeys.forEach(k=>{ colorMap[k] = requiredKeys.includes(k) ? 'correct' : 'extra'; });
+    colorMap.__missing = missing;
+    pyaRenderTopoEdges(colorMap);
+
+    const msgWrap = document.getElementById('pyaTopoMsgWrap');
+    if(missing.length===0 && extra.length===0){
+      s.checking = true;
+      pyaClearTopoTimer();
+      pyaSoundCorrect();
+      const timeBonus = Math.max(0, Math.round(s.timeLeft)*3);
+      const attemptPenalty = Math.min(s.attempts*15, 100);
+      const gained = Math.max(50, 150 + timeBonus - attemptPenalty);
+      s.score += gained;
+      msgWrap.innerHTML = `<div class="pya-explain"><strong style="color:var(--pya-green)">🎯 Topology correct! +${gained} pts</strong><br>Every device is wired exactly as required.</div>`;
+      setTimeout(()=>{ s.idx += 1; pyaLoadTopoLevel(); }, 1600);
+    } else {
+      s.attempts += 1;
+      pyaSoundWrong();
+      let msg = '';
+      if(missing.length) msg += `Missing ${missing.length} connection(s) — shown as dashed lines. `;
+      if(extra.length) msg += `${extra.length} connection(s) shouldn't be there — shown in red.`;
+      msgWrap.innerHTML = `<div class="pya-explain"><strong style="color:var(--pya-red)">Not quite — keep wiring.</strong><br>${pyaEsc(msg)}</div>`;
+      setTimeout(()=>{ if(!s.checking) pyaRenderTopoEdges(); }, 1800);
+    }
+  }
+
+  function pyaEndTopology(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('topology', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">🏁</div>
+        <h3 style="color:#fff; margin-top:8px;">Network Built!</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">All ${s.levels.length} topologies wired correctly.</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaTopoAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaTopoHub">🕹️ Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaTopoAgain').addEventListener('click', pyaStartTopology);
+    document.getElementById('pyaTopoHub').addEventListener('click', pyaGoHub);
+  }
+
+  /* ================= SUBNET SPRINT (Networking) ================= */
+  function pyaStartSubnet(){
+    pyaGame = 'subnet';
+    const pool = pyaShuffle(PYA_SUBNET_QUIZ).slice(0, 10);
+    pyaSession = {
+      questions: pool, idx:0, score:0, lives:3, streak:0, maxStreak:0,
+      timeLeft:20, timerId:null, answered:false,
+    };
+    pyaEnterGameScreen();
+    pyaRenderSubnetQuestion();
+  }
+
+  function pyaClearSubnetTimer(){ if(pyaSession.timerId){ clearInterval(pyaSession.timerId); pyaSession.timerId = null; } }
+
+  function pyaRenderSubnetQuestion(){
+    pyaClearSubnetTimer();
+    const s = pyaSession;
+    if(s.idx >= s.questions.length || s.lives<=0){ pyaEndSubnet(); return; }
+    const q = s.questions[s.idx];
+    s.answered = false;
+    s.timeLeft = 20;
+
+    const gs = document.getElementById('pyaGameScreen');
+    const hearts = [0,1,2].map(i=>`<span class="pya-heart ${i<s.lives?'':'dead'}">❤️</span>`).join('');
+    const dots = s.questions.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaSubnetBack">← Arena</button>
+        <div class="pya-hearts">${hearts}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <div class="pya-timerbar-track"><div class="pya-timerbar-fill" id="pyaSubnetTimerFill" style="width:100%"></div></div>
+        <div class="pya-qtext">${pyaEsc(q.q)}</div>
+        <div id="pyaSubnetOptions"></div>
+        <div id="pyaSubnetExplainWrap"></div>
+      </div>
+    `;
+    document.getElementById('pyaSubnetBack').addEventListener('click', ()=>{ pyaClearSubnetTimer(); pyaGoHub(); });
+
+    const optsWrap = document.getElementById('pyaSubnetOptions');
+    q.o.forEach((opt, i)=>{
+      const b = document.createElement('button');
+      b.className = 'pya-option';
+      b.textContent = opt;
+      b.addEventListener('click', ()=>pyaAnswerSubnet(i));
+      optsWrap.appendChild(b);
+    });
+
+    s.timerId = setInterval(()=>{
+      s.timeLeft -= 0.1;
+      const fill = document.getElementById('pyaSubnetTimerFill');
+      if(fill){
+        const pct = Math.max(0, (s.timeLeft/20)*100);
+        fill.style.width = pct+'%';
+        fill.classList.toggle('low', s.timeLeft < 6);
+      }
+      if(s.timeLeft <= 0){
+        pyaClearSubnetTimer();
+        pyaAnswerSubnet(-1);
+      }
+    }, 100);
+  }
+
+  function pyaAnswerSubnet(choiceIdx){
+    const s = pyaSession;
+    if(s.answered) return;
+    s.answered = true;
+    pyaClearSubnetTimer();
+    const q = s.questions[s.idx];
+    const correct = choiceIdx === q.a;
+    const options = document.querySelectorAll('#pyaSubnetOptions .pya-option');
+    options.forEach((btn,i)=>{
+      btn.disabled = true;
+      if(i===q.a) btn.classList.add('correct');
+      else if(i===choiceIdx) btn.classList.add('wrong');
+    });
+
+    if(correct){
+      pyaSoundCorrect();
+      s.streak += 1;
+      if(s.streak > s.maxStreak) s.maxStreak = s.streak;
+      const timeBonus = Math.max(0, Math.round(s.timeLeft) * 4);
+      const streakBonus = Math.min(s.streak,5) * 10;
+      const gained = 100 + timeBonus + streakBonus;
+      s.score += gained;
+      pyaShowSubnetExplain(q.e, `+${gained} pts  (streak x${s.streak})`, true);
+    } else {
+      pyaSoundWrong();
+      s.streak = 0;
+      s.lives -= 1;
+      pyaShowSubnetExplain(q.e, choiceIdx===-1 ? "Time's up!" : 'Not quite.', false);
+    }
+    if(s.maxStreak > pyaData.bestStreak){ pyaData.bestStreak = s.maxStreak; pyaSave(); }
+
+    setTimeout(()=>{ s.idx += 1; pyaRenderSubnetQuestion(); }, 1400);
+  }
+
+  function pyaShowSubnetExplain(text, tag, good){
+    const wrap = document.getElementById('pyaSubnetExplainWrap');
+    if(!wrap) return;
+    wrap.innerHTML = `<div class="pya-explain"><strong style="color:${good?'var(--pya-green)':'var(--pya-red)'}">${pyaEsc(tag)}</strong><br>${pyaEsc(text)}</div>`;
+  }
+
+  function pyaEndSubnet(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('subnet', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">${s.lives<=0 ? '💥' : '🏁'}</div>
+        <h3 style="color:#fff; margin-top:8px;">${s.lives<=0 ? 'Out of Lives!' : 'Subnet Sprint Complete!'}</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">Answered ${s.idx} of ${s.questions.length} · Best streak this run: ${s.maxStreak}</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaSubnetAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaSubnetHub">🕹️ Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaSubnetAgain').addEventListener('click', pyaStartSubnet);
+    document.getElementById('pyaSubnetHub').addEventListener('click', pyaGoHub);
+  }
+
+  /* ================= PROTOCOL & LAYER RUSH (Networking) ================= */
+  function pyaStartProtoRush(){
+    pyaGame = 'protorush';
+    const pool = pyaShuffle(PYA_PROTOCOL_RUSH).slice(0, 10);
+    pyaSession = {
+      questions: pool, idx:0, score:0, lives:3, streak:0, maxStreak:0,
+      timeLeft:10, roundTime:10, timerId:null, answered:false,
+    };
+    pyaEnterGameScreen();
+    pyaRenderProtoRound();
+  }
+
+  function pyaClearProtoTimer(){ if(pyaSession.timerId){ clearInterval(pyaSession.timerId); pyaSession.timerId = null; } }
+
+  function pyaRenderProtoRound(){
+    pyaClearProtoTimer();
+    const s = pyaSession;
+    if(s.idx >= s.questions.length || s.lives<=0){ pyaEndProtoRush(); return; }
+    const q = s.questions[s.idx];
+    s.answered = false;
+    s.roundTime = Math.max(5, 10 - s.idx*0.4);
+    s.timeLeft = s.roundTime;
+
+    const gs = document.getElementById('pyaGameScreen');
+    const hearts = [0,1,2].map(i=>`<span class="pya-heart ${i<s.lives?'':'dead'}">❤️</span>`).join('');
+    const dots = s.questions.map((_,i)=>`<span class="${i<s.idx?'done':(i===s.idx?'current':'')}"></span>`).join('');
+
+    gs.innerHTML = `
+      <div class="pya-game-head">
+        <button class="pya-back-btn" id="pyaProtoBack">← Arena</button>
+        <div class="pya-hearts">${hearts}</div>
+        <div class="pya-live-score">🪙 ${s.score}</div>
+      </div>
+      <div class="pya-progress-dots">${dots}</div>
+      <div class="pya-panel">
+        <div class="pya-timerbar-track"><div class="pya-timerbar-fill" id="pyaProtoTimerFill" style="width:100%"></div></div>
+        <div class="pya-qtext">${pyaEsc(q.q)}</div>
+        <div id="pyaProtoOptions"></div>
+        <div id="pyaProtoExplainWrap"></div>
+      </div>
+    `;
+    document.getElementById('pyaProtoBack').addEventListener('click', ()=>{ pyaClearProtoTimer(); pyaGoHub(); });
+
+    const optsWrap = document.getElementById('pyaProtoOptions');
+    q.o.forEach((opt, i)=>{
+      const b = document.createElement('button');
+      b.className = 'pya-option';
+      b.textContent = opt;
+      b.addEventListener('click', ()=>pyaAnswerProto(i));
+      optsWrap.appendChild(b);
+    });
+
+    s.timerId = setInterval(()=>{
+      s.timeLeft -= 0.1;
+      const fill = document.getElementById('pyaProtoTimerFill');
+      if(fill){
+        const pct = Math.max(0, (s.timeLeft/s.roundTime)*100);
+        fill.style.width = pct+'%';
+        fill.classList.toggle('low', s.timeLeft < s.roundTime*0.3);
+      }
+      if(s.timeLeft <= 0){
+        pyaClearProtoTimer();
+        pyaAnswerProto(-1);
+      }
+    }, 100);
+  }
+
+  function pyaAnswerProto(choiceIdx){
+    const s = pyaSession;
+    if(s.answered) return;
+    s.answered = true;
+    pyaClearProtoTimer();
+    const q = s.questions[s.idx];
+    const correct = choiceIdx === q.a;
+    const options = document.querySelectorAll('#pyaProtoOptions .pya-option');
+    options.forEach((btn,i)=>{
+      btn.disabled = true;
+      if(i===q.a) btn.classList.add('correct');
+      else if(i===choiceIdx) btn.classList.add('wrong');
+    });
+
+    if(correct){
+      pyaSoundCorrect();
+      s.streak += 1;
+      if(s.streak > s.maxStreak) s.maxStreak = s.streak;
+      const timeBonus = Math.max(0, Math.round(s.timeLeft) * 4);
+      const streakBonus = Math.min(s.streak,5) * 10;
+      const gained = 100 + timeBonus + streakBonus;
+      s.score += gained;
+      pyaShowProtoExplain(q.e, `+${gained} pts  (streak x${s.streak})`, true);
+    } else {
+      pyaSoundWrong();
+      s.streak = 0;
+      s.lives -= 1;
+      pyaShowProtoExplain(q.e, choiceIdx===-1 ? "Time's up!" : 'Not quite.', false);
+    }
+    if(s.maxStreak > pyaData.bestStreak){ pyaData.bestStreak = s.maxStreak; pyaSave(); }
+
+    setTimeout(()=>{ s.idx += 1; pyaRenderProtoRound(); }, 1400);
+  }
+
+  function pyaShowProtoExplain(text, tag, good){
+    const wrap = document.getElementById('pyaProtoExplainWrap');
+    if(!wrap) return;
+    wrap.innerHTML = `<div class="pya-explain"><strong style="color:${good?'var(--pya-green)':'var(--pya-red)'}">${pyaEsc(tag)}</strong><br>${pyaEsc(text)}</div>`;
+  }
+
+  function pyaEndProtoRush(){
+    const s = pyaSession;
+    const leveled = pyaFinishSession('protorush', s.score);
+    const gs = document.getElementById('pyaGameScreen');
+    gs.innerHTML = `
+      <div class="pya-panel pya-result-card">
+        <div style="font-size:34px;">${s.lives<=0 ? '💥' : '🏁'}</div>
+        <h3 style="color:#fff; margin-top:8px;">${s.lives<=0 ? 'Out of Lives!' : 'Protocol Rush Complete!'}</h3>
+        <div class="pya-led-score">${s.score} PTS</div>
+        <p style="color:var(--pya-ink-dim); font-size:13px; margin-top:8px;">Answered ${s.idx} of ${s.questions.length} · Best streak this run: ${s.maxStreak}</p>
+        ${leveled ? `<div class="pya-level-chip">🎉 Level up! ${leveled.icon} ${pyaEsc(leveled.name)}</div>` : ''}
+        <div class="pya-btn-row">
+          <button class="pya-btn-secondary" id="pyaProtoAgain">🔁 Play Again</button>
+          <button class="pya-btn-secondary" id="pyaProtoHub">🕹️ Back to Arena</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('pyaProtoAgain').addEventListener('click', pyaStartProtoRush);
+    document.getElementById('pyaProtoHub').addEventListener('click', pyaGoHub);
   }
 
   window.renderPythonArena = renderPythonArena;
