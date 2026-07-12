@@ -537,8 +537,14 @@ const SCHEMAS = {
     {key:'title', label:'Title', type:'text', required:true, placeholder:'Ranking Paper 1'},
     {key:'topic', label:'Topic / coverage note', type:'text', placeholder:'Covers Missions 1–2'},
     {key:'afterMissionId', label:'Appears after mission', type:'select', optionsSource:'missions', required:true},
+    {key:'examMode', label:'⚡ Special Live Exam (Zoom + strict timing + special look for students)', type:'checkbox', default:false},
+    {key:'zoomLink', label:'Zoom meeting link (shown to students; required for a live exam)', type:'text', placeholder:'https://zoom.us/j/xxxxxxxxxx?pwd=...'},
+    {key:'startsAt', label:'Exam opens at (exact date & time)', type:'datetime-local', helpNote:'Leave blank to open as soon as the other unlock rules are met (e.g. right after the break, for Paper 2). Set this for a hard "not before this time" floor.'},
+    {key:'requiresRpId', label:'Paper 2 pairing — only opens after THIS other ranking paper is submitted', type:'select', optionsSource:'rankingPapers', placeholderOption:'— Not paired with another paper (use for Paper 1) —'},
+    {key:'breakMinutes', label:'Mandatory break after that paper, in minutes (e.g. 30) — Paper 2 unlocks automatically once this elapses', type:'number', placeholder:'30'},
     {key:'deadline', label:'Deadline (informational text shown to students)', type:'text', placeholder:'Day 10'},
-    {key:'dueAt', label:'Exact deadline date & time (used to decide the on-time bonus)', type:'datetime-local'},
+    {key:'dueAt', label:'Exact deadline date & time (used to decide the on-time bonus, and the hard cutoff below)', type:'datetime-local', helpNote:'Leave blank to always award the on-time bonus. If "Hard lock" below is checked, this is also the exact moment the paper closes for good.'},
+    {key:'hardCutoff', label:'🔒 Hard lock at the deadline — block all late submissions completely (recommended for live exams)', type:'checkbox', default:false},
     {key:'paperLink', label:'Paper — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'markingSchemeLink', label:'Marking scheme — Drive link', type:'text', placeholder:'https://drive.google.com/...'},
     {key:'active', label:'Published (visible to students)', type:'checkbox', default:true},
@@ -884,11 +890,20 @@ function renderRPTable(){
     el.parentElement.innerHTML = `<div class="empty-note">No ranking papers yet. Click "+ Add Ranking Paper" above.</div>`;
     return;
   }
-  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Appears After</th><th>Deadline</th><th>On-time cutoff</th><th>Status</th><th></th></tr>` +
-    RANKING_PAPERS.map(p=>`<tr>
+  el.innerHTML = `<tr><th>#</th><th>Title</th><th>Appears After</th><th>Exam</th><th>Deadline</th><th>On-time cutoff</th><th>Status</th><th></th></tr>` +
+    RANKING_PAPERS.map(p=>{
+      const pairedTitle = p.requiresRpId ? (RANKING_PAPERS.find(x=>x.id===p.requiresRpId)?.title || '(deleted paper)') : null;
+      const examInfo = !p.examMode ? '<span style="color:var(--ink-soft);">—</span>' : `
+        <span class="pill" style="background:#fde8e8; color:#b42318;">⚡ Live</span>
+        ${p.zoomLink ? '<div style="font-size:11px; margin-top:3px;">📹 Zoom set</div>' : '<div style="font-size:11px; margin-top:3px; color:var(--red);">⚠ No Zoom link</div>'}
+        ${pairedTitle ? `<div style="font-size:11px; margin-top:3px;">After: ${escapeHtml(pairedTitle)} +${p.breakMinutes||30}m</div>` : ''}
+        ${p.hardCutoff ? '<div style="font-size:11px; margin-top:3px;">🔒 Hard cutoff</div>' : ''}
+      `;
+      return `<tr>
       <td class="mono">${p.order ?? '—'}</td>
       <td><b>${escapeHtml(p.title)}</b> ${accessBadge(p)}</td>
       <td>${escapeHtml(missionTitleById(p.afterMissionId))}</td>
+      <td style="font-size:12.5px;">${examInfo}</td>
       <td>${escapeHtml(p.deadline||'—')}</td>
       <td style="font-size:12.5px;">${formatDueAt(p.dueAt)}</td>
       <td><span class="pill ${p.active!==false?'pill-live':'pill-draft'}">${p.active!==false?'Published':'Draft'}</span></td>
@@ -898,7 +913,8 @@ function renderRPTable(){
         <button class="btn btn-ghost btn-sm" data-toggle-rp="${p.id}">${p.active!==false?'Unpublish':'Publish'}</button>
         <button class="btn btn-red btn-sm" data-delete-rp="${p.id}">Delete</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+    }).join('');
 
   el.querySelectorAll('[data-edit-rp]').forEach(b=>b.addEventListener('click', ()=>openItemForm('rankingPapers', RANKING_PAPERS.find(p=>p.id===b.dataset.editRp))));
   el.querySelectorAll('[data-access-rp]').forEach(b=>b.addEventListener('click', ()=>openAccessModal('rankingPapers', RANKING_PAPERS.find(p=>p.id===b.dataset.accessRp))));
@@ -950,8 +966,12 @@ function openItemForm(collectionName, existingItem){
         <textarea id="field_${f.key}" placeholder="${escapeAttr(f.placeholder||'')}">${escapeHtml(val||'')}</textarea>`;
     }
     if(f.type==='select'){
-      const opts = MISSIONS.map(m=>`<option value="${escapeAttr(m.id)}" ${val===m.id?'selected':''}>${escapeHtml(m.title)}</option>`).join('');
-      const placeholderOpt = f.placeholderOption ? `<option value="" ${!val?'selected':''}>${escapeHtml(f.placeholderOption)}</option>` : `<option value="">— Select a mission —</option>`;
+      const sourceList = f.optionsSource==='rankingPapers' ? RANKING_PAPERS : MISSIONS;
+      const opts = sourceList
+        .filter(x=>!existingItem || x.id!==existingItem.id) // an item can't be paired with / gated behind itself
+        .map(x=>`<option value="${escapeAttr(x.id)}" ${val===x.id?'selected':''}>${escapeHtml(x.title)}</option>`).join('');
+      const defaultPlaceholder = f.optionsSource==='rankingPapers' ? '— Select a ranking paper —' : '— Select a mission —';
+      const placeholderOpt = f.placeholderOption ? `<option value="" ${!val?'selected':''}>${escapeHtml(f.placeholderOption)}</option>` : `<option value="">${defaultPlaceholder}</option>`;
       return `<label class="field-label">${f.label}${f.required?' *':''}</label>
         <select id="field_${f.key}">${placeholderOpt}${opts}</select>`;
     }
@@ -964,9 +984,10 @@ function openItemForm(collectionName, existingItem){
         <input type="number" id="field_${f.key}" placeholder="${escapeAttr(f.placeholder||'')}" value="${val!==undefined && val!==null ? val : ''}">`;
     }
     if(f.type==='datetime-local'){
+      const note = f.helpNote || 'Leave blank to always award the on-time bonus for this item, regardless of when it\'s submitted.';
       return `<label class="field-label">${f.label}${f.required?' *':''}</label>
         <input type="datetime-local" id="field_${f.key}" value="${escapeAttr(val||'')}">
-        <p class="small-note" style="margin-top:4px;">Leave blank to always award the on-time bonus for this item, regardless of when it's submitted.</p>`;
+        <p class="small-note" style="margin-top:4px;">${escapeHtml(note)}</p>`;
     }
     return `<label class="field-label">${f.label}${f.required?' *':''}</label>
       <input type="text" id="field_${f.key}" placeholder="${escapeAttr(f.placeholder||'')}" value="${escapeAttr(val||'')}">`;
