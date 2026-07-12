@@ -247,6 +247,43 @@
   .status-pending{background:#FDF2DF; color:#a26a06;}
   .status-graded{background:var(--teal-soft); color:var(--teal);}
 
+  /* ---------- LIVE EXAM SPECIAL STYLING ---------- */
+  .mission-row.exam-row{
+    position:relative; border:1.5px solid var(--red);
+    background:linear-gradient(135deg, #fff5f4 0%, #fdeee8 100%);
+    box-shadow:0 0 0 1px rgba(217,83,79,0.12), 0 8px 22px rgba(217,83,79,0.14);
+    overflow:hidden;
+  }
+  .mission-row.exam-row::before{
+    content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(120deg, transparent 0%, rgba(255,255,255,.55) 45%, transparent 60%);
+    animation:examSheen 3.4s linear infinite;
+  }
+  @keyframes examSheen{0%{transform:translateX(-120%);}100%{transform:translateX(120%);}}
+  .mission-row.exam-row:hover{border-color:var(--red); background:linear-gradient(135deg, #fff0ee 0%, #fbe3da 100%);}
+  .m-num.rp.exam{background:linear-gradient(135deg, var(--red), #ad3733); box-shadow:0 0 0 4px rgba(217,83,79,0.16);}
+  .rp-tag.exam-tag{color:var(--red);}
+  .exam-countdown-mini{font-size:12px; font-weight:700; color:var(--red); margin-top:5px; letter-spacing:.03em; font-family:'JetBrains Mono';}
+  .status-live{background:var(--red); color:#fff; animation:pulseGlow 1.6s ease-in-out infinite;}
+
+  .exam-wait-card{text-align:center; padding:6px 6px 4px;}
+  .exam-wait-ic{font-size:38px; margin-bottom:4px;}
+  .exam-wait-card h4{font-size:18px; margin-bottom:8px;}
+  .exam-live-badge{
+    display:inline-flex; align-items:center; gap:6px; background:var(--red); color:#fff; font-size:11px; font-weight:700;
+    padding:6px 14px; border-radius:20px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:16px;
+    animation:pulseGlow 1.6s ease-in-out infinite;
+  }
+  @keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(217,83,79,.45);}50%{box-shadow:0 0 0 9px rgba(217,83,79,0);}}
+  .exam-countdown{font-size:32px; font-weight:700; color:var(--red); margin:8px 0 16px; letter-spacing:.03em; font-family:'JetBrains Mono';}
+  .exam-zoom-btn{
+    display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; width:100%;
+    margin:6px 0 14px; font-weight:700; color:#fff;
+    background:linear-gradient(135deg,#2D8CFF,#1c6fd6); box-shadow:0 6px 16px rgba(45,140,255,.28);
+  }
+  .exam-zoom-btn:hover{box-shadow:0 8px 20px rgba(45,140,255,.4);}
+  .exam-closed-note{color:var(--ink-soft);}
+
   /* Modal */
   .modal-overlay{
     display:none; position:fixed; inset:0; background:rgba(15,28,38,0.5); z-index:50;
@@ -1066,6 +1103,7 @@
           <div class="about-section">
             <h3>🏅 Ranking Papers</h3>
             <p>After every couple of missions, a Ranking Paper appears — a combined paper covering everything so far. These are worth more coins and help you (and your teacher) see exactly where you stand before moving further. They never block your mission progress, so you can keep going even if one is still being graded.</p>
+            <p>Some Ranking Papers are marked <strong>⚡ Live Exam</strong> — a special, invigilated sitting. You'll need to join the Zoom meeting at the scheduled time, and the paper itself only unlocks once the exam actually starts. If it's Paper 2 of a two-paper set, it unlocks automatically 30 minutes after you submit Paper 1 — that's your break, so you don't need to wait for anyone.</p>
           </div>
           <div class="about-section">
             <h3>📚 Study Plans</h3>
@@ -1760,6 +1798,34 @@ function tickExamCountdown(){
 tickExamCountdown();
 setInterval(tickExamCountdown, 1000);
 
+/* ---------------- LIVE EXAM PAPER COUNTDOWNS ---------------- */
+function tickExamPaperCountdowns(){
+  const nodes = document.querySelectorAll('[data-target]');
+  if(!nodes.length) return;
+  let anyFired = false;
+  nodes.forEach(el=>{
+    const target = Number(el.dataset.target);
+    const diff = target - Date.now();
+    if(diff <= 0){
+      el.textContent = el.classList.contains('exam-countdown-mini') ? '⏳ 00:00:00' : '00:00:00';
+      if(!el.dataset.fired){ el.dataset.fired = '1'; anyFired = true; }
+      return;
+    }
+    const s = Math.floor(diff/1000);
+    const hh = String(Math.floor(s/3600)).padStart(2,'0');
+    const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
+    const ss = String(s%60).padStart(2,'0');
+    const text = `${hh}:${mm}:${ss}`;
+    el.textContent = el.classList.contains('exam-countdown-mini') ? ('⏳ ' + text) : text;
+  });
+  if(anyFired){
+    // A timer just hit zero — refresh whatever is showing so the unlocked paper appears immediately.
+    if(openItem && openItem.type==='rp') renderRPModal(openItem.id);
+    if(currentView==='missions') renderMissionsList();
+  }
+}
+setInterval(tickExamPaperCountdowns, 1000);
+
 /* ---------------- render orchestration ---------------- */
 function renderAll(){
   renderShell();
@@ -1987,9 +2053,47 @@ function isUnlocked(missionId){
   return !!(sub && sub.submitted);
 }
 function isRPUnlocked(rp){
-  if(!rp.afterMissionId) return true;
-  const sub = profile.submissions[rp.afterMissionId];
-  return !!(sub && sub.submitted);
+  // Paper 2 of an exam pair: only unlocks once the linked paper (Paper 1) has been
+  // submitted, and only after the mandatory break has fully elapsed.
+  if(rp.requiresRpId){
+    const reqSub = profile.rpSubmissions[rp.requiresRpId];
+    if(!(reqSub && reqSub.submitted)) return false;
+    const breakMs = (Number(rp.breakMinutes) || 30) * 60000;
+    if(Date.now() < (reqSub.ts || 0) + breakMs) return false;
+  } else if(rp.afterMissionId){
+    const sub = profile.submissions[rp.afterMissionId];
+    if(!(sub && sub.submitted)) return false;
+  }
+  // Optional hard "opens at" time — keeps a paper hidden until its scheduled start,
+  // even if the other unlock conditions above are already satisfied.
+  if(rp.startsAt){
+    const startTs = new Date(rp.startsAt).getTime();
+    if(!isNaN(startTs) && Date.now() < startTs) return false;
+  }
+  return true;
+}
+function rpUnlockTarget(rp){
+  // Returns the timestamp (ms) this paper will unlock at, or null if it's not on a timer.
+  let target = null;
+  if(rp.requiresRpId){
+    const reqSub = profile.rpSubmissions[rp.requiresRpId];
+    if(reqSub && reqSub.submitted){
+      target = (reqSub.ts || 0) + (Number(rp.breakMinutes) || 30) * 60000;
+    }
+  }
+  if(rp.startsAt){
+    const startTs = new Date(rp.startsAt).getTime();
+    if(!isNaN(startTs) && (target===null || startTs > target)) target = startTs;
+  }
+  return (target && target > Date.now()) ? target : null;
+}
+function isRPClosed(rp){
+  if(!rp.hardCutoff || !rp.dueAt) return false;
+  const dueTs = new Date(rp.dueAt).getTime();
+  if(isNaN(dueTs)) return false;
+  const sub = profile.rpSubmissions[rp.id];
+  const already = sub && sub.submitted;
+  return !already && Date.now() > dueTs;
 }
 function isPlanUnlocked(plan){
   if(!plan.unlocksAfterMissionId) return true;
@@ -2067,22 +2171,37 @@ function renderMissionsList(){
       const sub = profile.rpSubmissions[rp.id];
       const done = sub && sub.submitted;
       const unlocked = isRPUnlocked(rp);
+      const closed = isRPClosed(rp);
       let statusClass, statusText;
       if(done){
         statusClass = sub.status==='graded' ? 'status-graded' : 'status-pending';
         statusText = sub.status==='graded' ? 'Graded' : 'Submitted · Pending review';
+      } else if(closed){
+        statusClass = 'status-locked';
+        statusText = 'Exam Closed';
+      } else if(unlocked){
+        statusClass = rp.examMode ? 'status-live' : 'status-todo';
+        statusText = rp.examMode ? '🔴 Live Now' : 'Available';
       } else {
-        statusClass = unlocked ? 'status-todo' : 'status-locked';
-        statusText = unlocked ? 'Available' : 'Locked';
+        statusClass = 'status-locked';
+        statusText = 'Locked';
       }
-      row.className = 'mission-row rp-row';
+
+      let countdownHtml = '';
+      if(rp.examMode && !done && !closed && !unlocked){
+        const target = rpUnlockTarget(rp);
+        if(target) countdownHtml = `<div class="exam-countdown-mini" data-target="${target}">⏳ --:--:--</div>`;
+      }
+
+      row.className = 'mission-row rp-row' + (rp.examMode ? ' exam-row' : '');
       row.onclick = ()=>openRP(rp.id);
       row.innerHTML = `
-        <div class="m-num rp">🏅</div>
+        <div class="m-num rp ${rp.examMode?'exam':''}">${rp.examMode ? '⚡' : '🏅'}</div>
         <div>
-          <div class="rp-tag">Ranking Paper</div>
+          <div class="rp-tag ${rp.examMode?'exam-tag':''}">${rp.examMode ? '⚡ Live Exam Paper' : 'Ranking Paper'}</div>
           <div class="m-title">${rp.title}</div>
           <div class="m-meta">${rp.topic||'Covers everything up to this point'}${rp.deadline?(' · Deadline: '+rp.deadline):''}</div>
+          ${countdownHtml}
         </div>
         <div class="m-status ${statusClass}">${statusText}</div>
       `;
@@ -2132,7 +2251,11 @@ function openMission(id){
 }
 function openRP(id){
   const rp = RANKING_PAPERS.find(r=>r.id===id);
-  if(!isRPUnlocked(rp)){
+  const sub = profile.rpSubmissions[id];
+  const alreadySubmitted = sub && sub.submitted;
+  // Exam-mode papers always open into a modal (waiting room / live / closed) so students
+  // can see the Zoom link and live countdown even before the paper unlocks.
+  if(!rp.examMode && !alreadySubmitted && !isRPUnlocked(rp)){
     alert(`🔒 ${rp.title} unlocks after you submit "${missionTitleFor(rp.afterMissionId)}".`);
     return;
   }
@@ -2382,14 +2505,57 @@ async function maybeStreakBonus(p){
 }
 
 /* ---------------- RANKING PAPER MODAL ---------------- */
+function examWaitingRoomHTML(rp, closed){
+  if(closed){
+    return `<div class="exam-wait-card">
+      <div class="exam-wait-ic">⏳</div>
+      <h4>Exam Window Closed</h4>
+      <p class="small-note exam-closed-note">The submission window for this paper ended${rp.dueAt ? (' on ' + new Date(rp.dueAt).toLocaleString(undefined,{dateStyle:'medium', timeStyle:'short'})) : ''} and no answer sheet was received. If you believe this is a mistake, contact your teacher directly.</p>
+    </div>`;
+  }
+  const reqTitle = rp.requiresRpId ? (RANKING_PAPERS.find(x=>x.id===rp.requiresRpId)?.title || 'the first paper') : null;
+  const reqSub = rp.requiresRpId ? profile.rpSubmissions[rp.requiresRpId] : null;
+  const target = rpUnlockTarget(rp);
+
+  let reasonHtml;
+  if(rp.requiresRpId && !(reqSub && reqSub.submitted)){
+    reasonHtml = `<p class="small-note">Submit <strong>${reqTitle}</strong> first. This paper unlocks automatically ${rp.breakMinutes||30} minutes after you submit it — no need to wait for your teacher.</p>`;
+  } else if(target){
+    reasonHtml = `<p class="small-note">This paper opens automatically — keep this page open, no refresh needed.</p>`;
+  } else {
+    reasonHtml = `<p class="small-note">This paper hasn't opened yet. Check back shortly.</p>`;
+  }
+
+  return `<div class="exam-wait-card">
+    <div class="exam-live-badge">🔴 Live Exam Session</div>
+    <div class="exam-wait-ic">🔒</div>
+    <h4>${target ? 'Opens Soon' : 'Locked'}</h4>
+    ${reasonHtml}
+    ${target ? `<div class="exam-countdown" data-target="${target}">--:--:--</div>` : ''}
+    ${rp.zoomLink ? `<a class="btn exam-zoom-btn" href="${escapeAttr(rp.zoomLink)}" target="_blank" rel="noopener">📹 Join Zoom Meeting</a>` : ''}
+    <p class="small-note">Join the Zoom meeting now if you haven't already — your teacher will guide the session live and monitor the exam throughout.</p>
+  </div>`;
+}
+
 function renderRPModal(id){
   const rp = RANKING_PAPERS.find(x=>x.id===id);
   const sub = profile.rpSubmissions[id] || {submitted:false, status:null, score:null};
   document.getElementById('modalTagDeadline').textContent = rp.deadline ? ('Deadline: ' + rp.deadline) : 'Ranking Paper';
-  document.getElementById('modalTitle').textContent = rp.title;
+  document.getElementById('modalTitle').textContent = (rp.examMode ? '⚡ ' : '') + rp.title;
   document.getElementById('modalTopic').textContent = rp.topic || 'Covers everything up to this point';
 
+  const unlocked = isRPUnlocked(rp);
+  const closed = isRPClosed(rp);
+
+  if(rp.examMode && !sub.submitted && (!unlocked || closed)){
+    document.getElementById('modalBody').innerHTML = examWaitingRoomHTML(rp, closed);
+    return;
+  }
+
+  const zoomBanner = (rp.examMode && rp.zoomLink) ? `<a class="btn exam-zoom-btn" href="${escapeAttr(rp.zoomLink)}" target="_blank" rel="noopener">📹 Join Zoom Meeting</a>` : '';
+
   const submitBlock = `
+    ${zoomBanner}
     <div class="step-block ${sub.submitted ? 'unlocked' : ''}">
       <div class="step-head"><span class="dot"></span> Step 1 — Submit Your Answer Sheet</div>
       <div class="file-input-wrap">
@@ -2438,6 +2604,13 @@ function renderRPModal(id){
 }
 
 async function handleSubmitRP(id){
+  const rpForCutoff = RANKING_PAPERS.find(x=>x.id===id);
+  if(rpForCutoff && isRPClosed(rpForCutoff)){
+    alert('⏳ The submission window for this exam paper has closed. Please contact your teacher.');
+    renderRPModal(id);
+    return;
+  }
+
   const input = document.getElementById('rpAnswerLinkInput');
   const link = input.value.trim();
   if(!link || !/^https?:\/\//i.test(link)){
