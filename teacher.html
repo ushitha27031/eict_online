@@ -248,7 +248,7 @@
         <div class="badge-mark">E</div>
         <div>
           <div class="brand-name">EICT Online</div>
-          <div class="brand-sub">Teacher Dashboard · v1.3.4</div>
+          <div class="brand-sub">Teacher Dashboard · v1.3.7</div>
         </div>
       </div>
       <div class="lock-notice">🔒 Private staff area. Never share this link or file with students.</div>
@@ -441,8 +441,12 @@ Ashan Fernando"></textarea>
       <button class="modal-close" id="accessModalCloseBtn">✕</button>
     </div>
     <div class="modal-body">
-      <p class="small-note" style="margin-bottom:10px;">Tick any student below to hold their access — this item will disappear from their dashboard entirely until you untick them. Everyone else is unaffected.</p>
-      <input type="text" id="accessSearchInput" placeholder="Search students…" style="margin-bottom:10px;">
+      <p class="small-note" id="accessModalInstructions" style="margin-bottom:10px;">Tick any student below to hold their access — this item will disappear from their dashboard entirely until you untick them. Everyone else is unaffected.</p>
+      <div style="display:flex; gap:16px; align-items:center; margin-bottom:10px;">
+        <input type="text" id="accessSearchInput" placeholder="Search students…" style="flex:1;">
+        <button type="button" class="btn btn-ghost btn-sm" id="accessSelectAllBtn" style="white-space:nowrap;">Select all</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="accessSelectNoneBtn" style="white-space:nowrap;">Select none</button>
+      </div>
       <div id="accessStudentList" style="max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
     </div>
     <div class="modal-foot">
@@ -540,6 +544,7 @@ const SCHEMAS = {
     {key:'title', label:'Title', type:'text', required:true, placeholder:'Ranking Paper 1'},
     {key:'topic', label:'Topic / coverage note', type:'text', placeholder:'Covers Missions 1–2'},
     {key:'afterMissionId', label:'Appears after mission', type:'select', optionsSource:'missions', required:true},
+    {key:'restricted', label:'🔒 Only show to students I specifically grant access to (recommended for live exams — use the Access button to choose who, e.g. only students sitting tomorrow)', type:'checkbox', default:false},
     {key:'examMode', label:'⚡ Special Live Exam (Zoom + strict timing + special look for students)', type:'checkbox', default:false},
     {key:'zoomLink', label:'Zoom meeting link (shown to students; required for a live exam)', type:'text', placeholder:'https://zoom.us/j/xxxxxxxxxx?pwd=...'},
     {key:'startsAt', label:'Exam opens at (exact date & time)', type:'datetime-local', helpNote:'Leave blank to open as soon as the other unlock rules are met (e.g. right after the break, for Paper 2). Set this for a hard "not before this time" floor.'},
@@ -765,7 +770,12 @@ function buildGradingQueue(){
     Object.entries(s.rpSubmissions||{}).forEach(([rpId,sub])=>{
       if(sub.submitted && sub.status==='pending'){
         const rp = RANKING_PAPERS.find(x=>x.id===rpId);
-        queue.push({studentKey:s._key, studentName:s.name, kind:'rp', itemId:rpId, itemTitle: rp ? rp.title : '(deleted ranking paper)', link:sub.link, ts:sub.ts||0});
+        const nextPaper = RANKING_PAPERS.find(x=>x.requiresRpId===rpId);
+        queue.push({
+          studentKey:s._key, studentName:s.name, kind:'rp', itemId:rpId,
+          itemTitle: rp ? rp.title : '(deleted ranking paper)', link:sub.link, ts:sub.ts||0,
+          gatesNextPaper: !!nextPaper, nextPaperTitle: nextPaper ? nextPaper.title : null, confirmed: !!sub.confirmed,
+        });
       }
     });
   });
@@ -912,7 +922,7 @@ function renderRPTable(){
       <td><span class="pill ${p.active!==false?'pill-live':'pill-draft'}">${p.active!==false?'Published':'Draft'}</span></td>
       <td class="row-actions">
         <button class="btn btn-ghost btn-sm" data-edit-rp="${p.id}">Edit</button>
-        <button class="btn btn-ghost btn-sm" data-access-rp="${p.id}">🚫 Access</button>
+        <button class="btn ${p.restricted?'btn-primary':'btn-ghost'} btn-sm" data-access-rp="${p.id}">${p.restricted?'🔒 Access List':'🚫 Access'}</button>
         <button class="btn btn-ghost btn-sm" data-toggle-rp="${p.id}">${p.active!==false?'Unpublish':'Publish'}</button>
         <button class="btn btn-red btn-sm" data-delete-rp="${p.id}">Delete</button>
       </td>
@@ -1035,8 +1045,11 @@ document.getElementById('formSaveBtn').addEventListener('click', async ()=>{
   saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
   try{
     const col = db.collection(currentFormCollection);
-    if(currentFormId){ await col.doc(currentFormId).set(data); }
-    else { await col.add(data); }
+    // merge:true is important here — it preserves fields not in the form schema
+    // (like the per-student access lists set from the Access modal) instead of
+    // wiping them out every time this item is edited.
+    if(currentFormId){ await col.doc(currentFormId).set(data, {merge:true}); }
+    else { await col.add({...data, createdAt: Date.now()}); }
 
     if(currentFormCollection==='missions') MISSIONS = await loadCollectionAdmin('missions');
     if(currentFormCollection==='studyPlans') STUDY_PLANS = await loadCollectionAdmin('studyPlans');
@@ -1088,6 +1101,14 @@ function renderGrading(){
   }
   wrap.innerHTML = queue.map(q=>{
     const uid = `${q.studentKey}__${q.kind}__${q.itemId}`;
+    const confirmRow = q.gatesNextPaper ? (
+      q.confirmed
+        ? `<div class="pill" style="background:var(--teal-soft); color:var(--teal); margin-top:8px; display:inline-block;">🔓 "${escapeHtml(q.nextPaperTitle)}" already unlocked early for this student</div>`
+        : `<div style="margin-top:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+             <button class="btn btn-purple btn-sm" data-confirm-unlock="${uid}">✅ Confirm & unlock "${escapeHtml(q.nextPaperTitle)}" now</button>
+             <span class="small-note">Otherwise it unlocks automatically after the usual break time.</span>
+           </div>`
+    ) : '';
     return `<div class="queue-card">
       <div class="qhead">
         <div>
@@ -1096,6 +1117,7 @@ function renderGrading(){
         </div>
         <a href="${escapeAttr(q.link)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">📄 Open Submission</a>
       </div>
+      ${confirmRow}
       <div class="qform">
         <input type="number" min="0" max="100" placeholder="Score %" id="score_${uid}">
         <input type="text" placeholder="Feedback for the student (optional)" id="feedback_${uid}">
@@ -1110,6 +1132,35 @@ function renderGrading(){
       saveGrade(studentKey, kind, itemId, btn);
     });
   });
+  wrap.querySelectorAll('[data-confirm-unlock]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const [studentKey, kind, itemId] = btn.dataset.confirmUnlock.split('__');
+      confirmRPSubmission(studentKey, itemId, btn);
+    });
+  });
+}
+
+// Manually confirms a student's ranking-paper submission so the paired "next" paper
+// unlocks immediately for them, instead of waiting for the usual break timer.
+async function confirmRPSubmission(studentKey, rpId, btn){
+  const student = STUDENTS.find(s=>s._key===studentKey);
+  if(!student){ alert('This student record could not be found — try refreshing.'); return; }
+  student.rpSubmissions = student.rpSubmissions || {};
+  const sub = student.rpSubmissions[rpId];
+  if(!sub){ alert('This submission could not be found — try refreshing.'); return; }
+
+  sub.confirmed = true;
+  sub.confirmedTs = Date.now();
+
+  btn.disabled = true; btn.textContent = 'Unlocking…';
+  try{
+    await saveStudentDoc(student);
+    renderGrading();
+  }catch(e){
+    console.error(e);
+    alert('Could not confirm this submission — please check your connection and try again.');
+    btn.disabled = false; btn.textContent = '✅ Confirm & unlock now';
+  }
 }
 
 async function saveGrade(studentKey, kind, itemId, btn){
@@ -1307,10 +1358,16 @@ async function resetStudentPassword(studentKey){
 let currentAccessCollection = null;
 let currentAccessItem = null;
 
+let accessModalMode = 'deny'; // 'deny' = hiddenFor (visible to all except ticked); 'allow' = allowedFor (hidden from all except ticked)
+
 function openAccessModal(collectionName, item){
   currentAccessCollection = collectionName;
   currentAccessItem = item;
+  accessModalMode = (collectionName==='rankingPapers' && item.restricted) ? 'allow' : 'deny';
   document.getElementById('accessModalTitle').textContent = `Manage Access — ${escapeHtml(item.title||'Untitled')}`;
+  document.getElementById('accessModalInstructions').textContent = accessModalMode==='allow'
+    ? 'This paper is restricted — it is completely hidden until you tick a student below. Only ticked students will see it on their dashboard (perfect for staggering an exam across two sitting days).'
+    : 'Tick any student below to hold their access — this item will disappear from their dashboard entirely until you untick them. Everyone else is unaffected.';
   document.getElementById('accessSearchInput').value = '';
   renderAccessStudentList('');
   document.getElementById('accessModal').classList.add('show');
@@ -1318,7 +1375,7 @@ function openAccessModal(collectionName, item){
 
 function renderAccessStudentList(filterText){
   const wrap = document.getElementById('accessStudentList');
-  const hiddenFor = new Set(currentAccessItem.hiddenFor || []);
+  const activeSet = new Set((accessModalMode==='allow' ? currentAccessItem.allowedFor : currentAccessItem.hiddenFor) || []);
   const q = (filterText||'').toLowerCase();
   const sorted = [...STUDENTS].sort((a,b)=>a.name.localeCompare(b.name));
   const filtered = q ? sorted.filter(s=>s.name.toLowerCase().includes(q)) : sorted;
@@ -1329,24 +1386,40 @@ function renderAccessStudentList(filterText){
   }
   wrap.innerHTML = filtered.map(s=>`
     <label style="display:flex; align-items:center; gap:8px; padding:6px 4px; border-radius:6px; cursor:pointer;">
-      <input type="checkbox" class="access-student-check" data-student-key="${escapeAttr(s._key)}" ${hiddenFor.has(s._key)?'checked':''}>
+      <input type="checkbox" class="access-student-check" data-student-key="${escapeAttr(s._key)}" ${activeSet.has(s._key)?'checked':''}>
       <span>${escapeHtml(s.name)}</span>
     </label>
   `).join('');
 }
 
 document.getElementById('accessSearchInput').addEventListener('input', (e)=>renderAccessStudentList(e.target.value));
+document.getElementById('accessSelectAllBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('#accessStudentList .access-student-check').forEach(c=>c.checked = true);
+});
+document.getElementById('accessSelectNoneBtn').addEventListener('click', ()=>{
+  document.querySelectorAll('#accessStudentList .access-student-check').forEach(c=>c.checked = false);
+});
 document.getElementById('accessModalCloseBtn').addEventListener('click', ()=>document.getElementById('accessModal').classList.remove('show'));
 document.getElementById('accessModalCancelBtn').addEventListener('click', ()=>document.getElementById('accessModal').classList.remove('show'));
 document.getElementById('accessModal').addEventListener('click', (e)=>{ if(e.target.id==='accessModal') document.getElementById('accessModal').classList.remove('show'); });
 
 document.getElementById('accessModalSaveBtn').addEventListener('click', async ()=>{
-  const checked = [...document.querySelectorAll('.access-student-check:checked')].map(c=>c.dataset.studentKey);
+  // Only the students currently visible under the active search filter are in the DOM,
+  // so start from the previously saved list and just apply changes for whichever
+  // checkboxes are actually rendered right now — this avoids accidentally clearing
+  // everyone else's access when the teacher searched before saving.
+  const fieldName = accessModalMode==='allow' ? 'allowedFor' : 'hiddenFor';
+  const previous = new Set((currentAccessItem[fieldName]) || []);
+  document.querySelectorAll('#accessStudentList .access-student-check').forEach(c=>{
+    if(c.checked) previous.add(c.dataset.studentKey);
+    else previous.delete(c.dataset.studentKey);
+  });
+  const finalList = [...previous];
   const btn = document.getElementById('accessModalSaveBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
   try{
-    await db.collection(currentAccessCollection).doc(currentAccessItem.id).update({hiddenFor: checked});
-    currentAccessItem.hiddenFor = checked;
+    await db.collection(currentAccessCollection).doc(currentAccessItem.id).update({[fieldName]: finalList});
+    currentAccessItem[fieldName] = finalList;
     if(currentAccessCollection==='missions') renderMissionsTable();
     if(currentAccessCollection==='studyPlans') renderPlansTable();
     if(currentAccessCollection==='rankingPapers') renderRPTable();
@@ -1412,6 +1485,11 @@ document.getElementById('statusModal').addEventListener('click', (e)=>{ if(e.tar
 
 
 function accessBadge(item){
+  if(item.restricted){
+    const n = (item.allowedFor||[]).length;
+    const total = STUDENTS.length;
+    return `<span class="pill" style="background:#eef4ff; color:var(--primary);" title="Only visible to students given access">🔒 ${n}/${total} have access</span>`;
+  }
   const n = (item.hiddenFor||[]).length;
   return n>0 ? `<span class="pill pill-dup" title="Hidden from ${n} student${n===1?'':'s'}">🚫 ${n}</span>` : '';
 }
