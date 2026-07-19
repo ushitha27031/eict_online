@@ -1803,37 +1803,43 @@ document.getElementById('sendBillBtn').addEventListener('click', async ()=>{
   if(target==='__all__' && !confirm(`Send this bill to all ${targets.length} students?`)) return;
 
   btn.disabled = true; btn.textContent = 'Sending…';
-  try{
-    const now = Date.now();
-    const batchWrites = targets.map(s=>{
-      const bill = {
-        studentKey: s._key,
-        studentName: s.name,
-        label, amount, note,
-        status: 'unpaid',
-        receiptImage: '',
-        receiptNote: '',
-        submittedAt: null,
-        reviewNote: '',
-        reviewedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      };
-      return db.collection('bills').add(bill).then(ref=>({id:ref.id, ...bill}));
-    });
-    const created = await Promise.all(batchWrites);
-    BILLS = BILLS.concat(created);
+  const now = Date.now();
+  const results = await Promise.allSettled(targets.map(s=>{
+    const bill = {
+      studentKey: s._key,
+      studentName: s.name,
+      label, amount, note,
+      status: 'unpaid',
+      receiptImage: '',
+      receiptNote: '',
+      submittedAt: null,
+      reviewNote: '',
+      reviewedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return db.collection('bills').add(bill).then(ref=>({id:ref.id, ...bill}));
+  }));
+
+  const succeeded = results.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  const failed = results.filter(r=>r.status==='rejected');
+  if(succeeded.length>0) BILLS = BILLS.concat(succeeded);
+
+  if(failed.length>0) console.error('Some bill sends failed:', failed.map(f=>f.reason));
+
+  if(failed.length===0){
     document.getElementById('billAmount').value = '';
     document.getElementById('billLabel').value = '';
     document.getElementById('billNote').value = '';
-    status.textContent = `Sent to ${targets.length} student${targets.length===1?'':'s'} ✓`;
+    status.textContent = `Sent to ${succeeded.length} student${succeeded.length===1?'':'s'} ✓`;
     setTimeout(()=>{ status.textContent=''; }, 3000);
-    renderBillingTable();
-    renderOverview();
-  }catch(e){
-    console.error(e);
-    status.textContent = 'Could not send — please try again.';
+  } else if(succeeded.length>0){
+    status.textContent = `Sent to ${succeeded.length} of ${targets.length} — ${failed.length} failed, please retry.`;
+  } else {
+    status.textContent = 'Could not send — please check your connection and try again.';
   }
+  renderBillingTable();
+  renderOverview();
   btn.disabled = false; btn.textContent = '📨 Send Bill';
 });
 
