@@ -162,6 +162,13 @@
   .pill{display:inline-block; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap;}
   .pill-live{background:var(--teal-soft); color:var(--teal);}
   .pill-draft{background:#f1f3f4; color:#8a96a0;}
+  .pill-unpaid{background:var(--amber-soft); color:#9a6a00;}
+  .pill-submitted{background:var(--purple-soft); color:var(--purple);}
+  .pill-approved{background:var(--teal-soft); color:var(--teal);}
+  .pill-rejected{background:var(--red-soft); color:var(--red);}
+  .receipt-thumb{width:52px; height:52px; object-fit:cover; border-radius:8px; border:1px solid var(--border); cursor:pointer; display:block;}
+  .receipt-full{max-width:100%; max-height:65vh; border-radius:10px; display:block; margin:0 auto; border:1px solid var(--border);}
+  .billing-settings-note{font-size:12px; color:var(--ink-soft); margin-bottom:14px; line-height:1.5;}
   .pill-pending{background:var(--amber-soft); color:#a26a06;}
   .pill-graded{background:var(--teal-soft); color:var(--teal);}
   .pill-dup{background:var(--red-soft); color:var(--red);}
@@ -259,6 +266,7 @@
         <button data-view="rp"><span class="lft"><span class="ic">🏅</span> Ranking Papers</span></button>
         <button data-view="store"><span class="lft"><span class="ic">🎬</span> Video Store</span></button>
         <button data-view="grading"><span class="lft"><span class="ic">📝</span> Grade Submissions</span> <span class="nav-count" id="navGradingCount" style="display:none;">0</span></button>
+        <button data-view="billing"><span class="lft"><span class="ic">💳</span> Billing</span> <span class="nav-count" id="navBillingCount" style="display:none;">0</span></button>
         <button data-view="students"><span class="lft"><span class="ic">🧑‍🎓</span> Students</span></button>
       </nav>
       <div class="sidebar-foot">
@@ -342,6 +350,58 @@
           </div>
         </div>
         <div id="gradingWrap"></div>
+      </section>
+
+      <!-- ---------- BILLING ---------- -->
+      <section class="view" id="view-billing">
+        <div class="topbar">
+          <div>
+            <h2>💳 Billing</h2>
+            <div class="sub">Send bills, share bank/payment details, and review payment receipts students upload.</div>
+          </div>
+        </div>
+
+        <div class="grid grid-2" style="align-items:start; margin-bottom:16px;">
+          <div class="card">
+            <h3><span class="ic">🏦</span> Bank Details &amp; Payment Methods</h3>
+            <p class="billing-settings-note">Shown to every student on their Billing tab, next to whatever bill you send them. Save once here — no need to repeat it in every bill.</p>
+            <label class="field-label">Currency</label>
+            <input type="text" id="billCurrency" placeholder="e.g. LKR, Rs., $">
+            <label class="field-label" style="margin-top:14px;">Bank Name</label>
+            <input type="text" id="billBankName" placeholder="e.g. Commercial Bank">
+            <label class="field-label" style="margin-top:14px;">Account Name</label>
+            <input type="text" id="billAccountName" placeholder="e.g. EICT Online">
+            <label class="field-label" style="margin-top:14px;">Account Number</label>
+            <input type="text" id="billAccountNumber" placeholder="e.g. 8001234567">
+            <label class="field-label" style="margin-top:14px;">Branch</label>
+            <input type="text" id="billBranch" placeholder="e.g. Maharagama">
+            <label class="field-label" style="margin-top:14px;">Other Payment Methods (optional)</label>
+            <textarea id="billOtherMethods" rows="3" placeholder="e.g. eZ Cash 077xxxxxxx, or a payment link"></textarea>
+            <button class="btn btn-primary btn-sm" id="saveBillingSettingsBtn" style="margin-top:14px;">💾 Save Details</button>
+            <span class="small-note" id="billingSettingsStatus" style="margin-left:8px;"></span>
+          </div>
+
+          <div class="card">
+            <h3><span class="ic">📨</span> Send a Bill</h3>
+            <label class="field-label">Send to</label>
+            <select id="billTargetStudent">
+              <option value="__all__">All students</option>
+            </select>
+            <label class="field-label" style="margin-top:14px;">Amount</label>
+            <input type="number" id="billAmount" min="0" step="0.01" placeholder="e.g. 2500">
+            <label class="field-label" style="margin-top:14px;">Label</label>
+            <input type="text" id="billLabel" placeholder="e.g. Monthly Class Fee — July">
+            <label class="field-label" style="margin-top:14px;">Note to student (optional)</label>
+            <textarea id="billNote" rows="3" placeholder="Anything students should know about this bill…"></textarea>
+            <button class="btn btn-primary btn-sm" id="sendBillBtn" style="margin-top:14px;">📨 Send Bill</button>
+            <span class="small-note" id="sendBillStatus" style="margin-left:8px;"></span>
+          </div>
+        </div>
+
+        <div class="card table-wrap">
+          <h3 style="margin-bottom:14px;"><span class="ic">🧾</span> All Bills</h3>
+          <div id="billingTableWrap"></div>
+        </div>
       </section>
 
       <!-- ---------- STUDENTS ---------- -->
@@ -472,6 +532,27 @@ Ashan Fernando"></textarea>
   </div>
 </div>
 
+<!-- ================= RECEIPT REVIEW MODAL ================= -->
+<div class="modal-overlay" id="receiptModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="receiptModalTitle">Review Receipt</h3>
+      <button class="modal-close" id="receiptModalCloseBtn">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="receiptModalMeta" class="small-note" style="margin-bottom:10px;"></div>
+      <img id="receiptModalImage" class="receipt-full" src="" alt="Payment receipt">
+      <label class="field-label" style="margin-top:16px;">Note back to student (optional)</label>
+      <textarea id="receiptReviewNote" rows="2" placeholder="e.g. Thanks! Confirmed. or Amount doesn't match, please re-upload."></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" id="receiptModalCloseBtn2">Close</button>
+      <button class="btn btn-red btn-sm" id="receiptRejectBtn">✕ Reject</button>
+      <button class="btn btn-teal btn-sm" id="receiptApproveBtn">✓ Approve</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    EICT ONLINE — Teacher Dashboard (private, login-protected)
@@ -496,6 +577,8 @@ let STUDY_PLANS = [];
 let RANKING_PAPERS = [];
 let STORE_VIDEOS = [];
 let STUDENTS = [];
+let BILLS = [];
+let BILLING_SETTINGS = {};
 let currentView = 'overview';
 let currentFormCollection = null;
 
@@ -628,13 +711,27 @@ async function loadStudents(){
     return snap.docs.map(d=>({_key:d.id, ...d.data()}));
   }catch(e){ console.error(e); return []; }
 }
+async function loadBills(){
+  try{
+    const snap = await db.collection('bills').get();
+    return snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }catch(e){ console.error(e); return []; }
+}
+async function loadBillingSettings(){
+  try{
+    const snap = await db.collection('settings').doc('billing').get();
+    return snap.exists ? snap.data() : {};
+  }catch(e){ console.error(e); return {}; }
+}
 async function loadAllContent(){
-  [MISSIONS, STUDY_PLANS, RANKING_PAPERS, STORE_VIDEOS, STUDENTS] = await Promise.all([
+  [MISSIONS, STUDY_PLANS, RANKING_PAPERS, STORE_VIDEOS, STUDENTS, BILLS, BILLING_SETTINGS] = await Promise.all([
     loadCollectionAdmin('missions'),
     loadCollectionAdmin('studyPlans'),
     loadCollectionAdmin('rankingPapers'),
     loadCollectionAdmin('store'),
     loadStudents(),
+    loadBills(),
+    loadBillingSettings(),
   ]);
 }
 
@@ -658,6 +755,7 @@ function renderAll(){
   renderStoreTable();
   renderGrading();
   renderStudents();
+  renderBilling();
 }
 function renderView(name){
   if(name==='overview') renderOverview();
@@ -667,6 +765,7 @@ function renderView(name){
   if(name==='store') renderStoreTable();
   if(name==='grading') renderGrading();
   if(name==='students') renderStudents();
+  if(name==='billing') renderBilling();
 }
 
 /* ---------------- helpers ---------------- */
@@ -799,6 +898,11 @@ function renderOverview(){
   }
 
   const publishedMissions = MISSIONS.filter(m=>m.active!==false).length;
+  const unpaidBillsCount = BILLS.filter(b=>b.status==='unpaid'||b.status==='rejected').length;
+  const receiptsToReviewCount = BILLS.filter(b=>b.status==='submitted').length;
+  const navBillBadge = document.getElementById('navBillingCount');
+  if(receiptsToReviewCount>0){ navBillBadge.style.display='inline-block'; navBillBadge.textContent = receiptsToReviewCount; }
+  else { navBillBadge.style.display='none'; }
   document.getElementById('overviewStats').innerHTML = `
     <div class="stat-box"><div class="v">${STUDENTS.length}</div><div class="l">Students</div></div>
     <div class="stat-box"><div class="v">${publishedMissions}/${MISSIONS.length}</div><div class="l">Missions Published</div></div>
@@ -807,6 +911,8 @@ function renderOverview(){
     <div class="stat-box"><div class="v">${STORE_VIDEOS.filter(p=>p.active!==false).length}</div><div class="l">Store Videos Live</div></div>
     <div class="stat-box"><div class="v ${queue.length>0?'warn':''}">${queue.length}</div><div class="l">Pending Reviews</div></div>
     <div class="stat-box"><div class="v ${pairs.length>0?'alert':''}">${pairs.length}</div><div class="l">Possible Duplicates</div></div>
+    <div class="stat-box"><div class="v ${receiptsToReviewCount>0?'warn':''}">${receiptsToReviewCount}</div><div class="l">Receipts To Review</div></div>
+    <div class="stat-box"><div class="v ${unpaidBillsCount>0?'alert':''}">${unpaidBillsCount}</div><div class="l">Unpaid Bills</div></div>
   `;
 
   const preview = queue.slice(0,5);
@@ -1609,6 +1715,206 @@ async function deleteStudent(studentKey){
     renderStudents();
     renderOverview();
   }catch(e){ console.error(e); alert('Could not delete — please try again.'); }
+}
+
+/* ============================================================
+   BILLING
+   ============================================================ */
+const BILL_STATUS_LABELS = {
+  unpaid: 'Unpaid',
+  submitted: 'Receipt Submitted',
+  approved: 'Paid',
+  rejected: 'Rejected',
+};
+function billStatusPillHTML(status){
+  const cls = 'pill-'+(status||'unpaid');
+  return `<span class="pill ${cls}">${BILL_STATUS_LABELS[status]||status}</span>`;
+}
+function formatMoney(amount, currency){
+  const cur = currency || BILLING_SETTINGS.currency || '';
+  const n = Number(amount)||0;
+  return `${cur ? cur+' ' : ''}${n.toLocaleString(undefined,{minimumFractionDigits: n%1===0?0:2, maximumFractionDigits:2})}`;
+}
+
+function renderBilling(){
+  renderBillingSettingsForm();
+  renderBillTargetOptions();
+  renderBillingTable();
+}
+
+function renderBillingSettingsForm(){
+  const s = BILLING_SETTINGS || {};
+  document.getElementById('billCurrency').value = s.currency || '';
+  document.getElementById('billBankName').value = s.bankName || '';
+  document.getElementById('billAccountName').value = s.accountName || '';
+  document.getElementById('billAccountNumber').value = s.accountNumber || '';
+  document.getElementById('billBranch').value = s.branch || '';
+  document.getElementById('billOtherMethods').value = s.otherMethods || '';
+}
+
+document.getElementById('saveBillingSettingsBtn').addEventListener('click', async ()=>{
+  const status = document.getElementById('billingSettingsStatus');
+  const btn = document.getElementById('saveBillingSettingsBtn');
+  const settings = {
+    currency: document.getElementById('billCurrency').value.trim(),
+    bankName: document.getElementById('billBankName').value.trim(),
+    accountName: document.getElementById('billAccountName').value.trim(),
+    accountNumber: document.getElementById('billAccountNumber').value.trim(),
+    branch: document.getElementById('billBranch').value.trim(),
+    otherMethods: document.getElementById('billOtherMethods').value.trim(),
+    updatedAt: Date.now(),
+  };
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await db.collection('settings').doc('billing').set(settings);
+    BILLING_SETTINGS = settings;
+    status.textContent = 'Saved ✓';
+    setTimeout(()=>{ status.textContent=''; }, 2500);
+  }catch(e){
+    console.error(e);
+    status.textContent = 'Could not save — try again.';
+  }
+  btn.disabled = false; btn.textContent = '💾 Save Details';
+});
+
+function renderBillTargetOptions(){
+  const sel = document.getElementById('billTargetStudent');
+  const prev = sel.value;
+  const sorted = [...STUDENTS].sort((a,b)=>a.name.localeCompare(b.name));
+  sel.innerHTML = `<option value="__all__">All students</option>` +
+    sorted.map(s=>`<option value="${escapeAttr(s._key)}">${escapeHtml(s.name)}</option>`).join('');
+  if(prev && [...sel.options].some(o=>o.value===prev)) sel.value = prev;
+}
+
+document.getElementById('sendBillBtn').addEventListener('click', async ()=>{
+  const status = document.getElementById('sendBillStatus');
+  const btn = document.getElementById('sendBillBtn');
+  const target = document.getElementById('billTargetStudent').value;
+  const amount = parseFloat(document.getElementById('billAmount').value);
+  const label = document.getElementById('billLabel').value.trim();
+  const note = document.getElementById('billNote').value.trim();
+
+  if(!label){ alert('Please give this bill a label, e.g. "Monthly Class Fee — July".'); return; }
+  if(isNaN(amount) || amount<=0){ alert('Please enter a valid amount greater than 0.'); return; }
+  if(!target){ alert('Please choose who to send this bill to.'); return; }
+
+  const targets = target==='__all__' ? STUDENTS : STUDENTS.filter(s=>s._key===target);
+  if(targets.length===0){ alert('No matching student found.'); return; }
+  if(target==='__all__' && !confirm(`Send this bill to all ${targets.length} students?`)) return;
+
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try{
+    const now = Date.now();
+    const batchWrites = targets.map(s=>{
+      const bill = {
+        studentKey: s._key,
+        studentName: s.name,
+        label, amount, note,
+        status: 'unpaid',
+        receiptImage: '',
+        receiptNote: '',
+        submittedAt: null,
+        reviewNote: '',
+        reviewedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return db.collection('bills').add(bill).then(ref=>({id:ref.id, ...bill}));
+    });
+    const created = await Promise.all(batchWrites);
+    BILLS = BILLS.concat(created);
+    document.getElementById('billAmount').value = '';
+    document.getElementById('billLabel').value = '';
+    document.getElementById('billNote').value = '';
+    status.textContent = `Sent to ${targets.length} student${targets.length===1?'':'s'} ✓`;
+    setTimeout(()=>{ status.textContent=''; }, 3000);
+    renderBillingTable();
+    renderOverview();
+  }catch(e){
+    console.error(e);
+    status.textContent = 'Could not send — please try again.';
+  }
+  btn.disabled = false; btn.textContent = '📨 Send Bill';
+});
+
+function renderBillingTable(){
+  const wrap = document.getElementById('billingTableWrap');
+  if(BILLS.length===0){
+    wrap.innerHTML = `<div class="empty-note">No bills sent yet. Use "Send a Bill" above to get started.</div>`;
+    return;
+  }
+  const sorted = [...BILLS].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  wrap.innerHTML = `<table class="data"><tr><th>Student</th><th>Label</th><th>Amount</th><th>Status</th><th>Sent</th><th>Receipt</th><th></th></tr>` +
+    sorted.map(b=>`<tr>
+      <td>${escapeHtml(b.studentName)}</td>
+      <td>${escapeHtml(b.label)}${b.note ? `<div class="small-note">${escapeHtml(b.note)}</div>` : ''}</td>
+      <td class="mono">${formatMoney(b.amount)}</td>
+      <td>${billStatusPillHTML(b.status)}</td>
+      <td style="font-size:12.5px;">${b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '—'}</td>
+      <td>${b.receiptImage ? `<img class="receipt-thumb" src="${escapeAttr(b.receiptImage)}" data-view-receipt="${b.id}">` : '—'}</td>
+      <td class="row-actions">
+        ${b.status==='submitted' ? `<button class="btn btn-teal btn-sm" data-review-receipt="${b.id}">Review</button>` : ''}
+        ${(b.status==='unpaid'||b.status==='rejected') ? `<button class="btn btn-red btn-sm" data-cancel-bill="${b.id}">Cancel</button>` : ''}
+      </td>
+    </tr>`).join('') + `</table>`;
+
+  wrap.querySelectorAll('[data-view-receipt]').forEach(img=>img.addEventListener('click', ()=>openReceiptModal(img.dataset.viewReceipt)));
+  wrap.querySelectorAll('[data-review-receipt]').forEach(btn=>btn.addEventListener('click', ()=>openReceiptModal(btn.dataset.reviewReceipt)));
+  wrap.querySelectorAll('[data-cancel-bill]').forEach(btn=>btn.addEventListener('click', ()=>cancelBill(btn.dataset.cancelBill)));
+}
+
+let currentReceiptBillId = null;
+function openReceiptModal(billId){
+  const bill = BILLS.find(b=>b.id===billId);
+  if(!bill) return;
+  currentReceiptBillId = billId;
+  document.getElementById('receiptModalTitle').textContent = `${bill.studentName} — ${bill.label}`;
+  document.getElementById('receiptModalMeta').textContent =
+    `Amount: ${formatMoney(bill.amount)}` + (bill.submittedAt ? ` · Receipt uploaded ${new Date(bill.submittedAt).toLocaleString()}` : '');
+  document.getElementById('receiptModalImage').src = bill.receiptImage || '';
+  document.getElementById('receiptReviewNote').value = bill.reviewNote || '';
+  const canReview = bill.status==='submitted';
+  document.getElementById('receiptApproveBtn').style.display = canReview ? 'inline-flex' : 'none';
+  document.getElementById('receiptRejectBtn').style.display = canReview ? 'inline-flex' : 'none';
+  document.getElementById('receiptModal').classList.add('show');
+}
+document.getElementById('receiptModalCloseBtn').addEventListener('click', ()=>document.getElementById('receiptModal').classList.remove('show'));
+document.getElementById('receiptModalCloseBtn2').addEventListener('click', ()=>document.getElementById('receiptModal').classList.remove('show'));
+document.getElementById('receiptModal').addEventListener('click', (e)=>{ if(e.target.id==='receiptModal') document.getElementById('receiptModal').classList.remove('show'); });
+
+async function reviewBill(newStatus){
+  if(!currentReceiptBillId) return;
+  const bill = BILLS.find(b=>b.id===currentReceiptBillId);
+  if(!bill) return;
+  const reviewNote = document.getElementById('receiptReviewNote').value.trim();
+  try{
+    const update = {status:newStatus, reviewNote, reviewedAt: Date.now(), updatedAt: Date.now()};
+    await db.collection('bills').doc(bill.id).update(update);
+    Object.assign(bill, update);
+    document.getElementById('receiptModal').classList.remove('show');
+    renderBillingTable();
+    renderOverview();
+  }catch(e){
+    console.error(e);
+    alert('Could not save this review — please check your connection and try again.');
+  }
+}
+document.getElementById('receiptApproveBtn').addEventListener('click', ()=>reviewBill('approved'));
+document.getElementById('receiptRejectBtn').addEventListener('click', ()=>reviewBill('rejected'));
+
+async function cancelBill(billId){
+  const bill = BILLS.find(b=>b.id===billId);
+  if(!bill) return;
+  if(!confirm(`Cancel this bill for ${bill.studentName} (${bill.label}, ${formatMoney(bill.amount)})? This removes it completely.`)) return;
+  try{
+    await db.collection('bills').doc(billId).delete();
+    BILLS = BILLS.filter(b=>b.id!==billId);
+    renderBillingTable();
+    renderOverview();
+  }catch(e){
+    console.error(e);
+    alert('Could not cancel this bill — please try again.');
+  }
 }
 </script>
 </body>
