@@ -416,6 +416,24 @@
   .video-price{font-family:'JetBrains Mono'; font-weight:700; color:var(--amber); font-size:15px; margin-top:auto; padding-top:8px;}
   .dummy-tag{display:inline-block; font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--red); background:#FBE7E6; padding:2px 7px; border-radius:10px; align-self:flex-start;}
 
+  /* ---------- BILLING ---------- */
+  .pill{display:inline-block; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; white-space:nowrap;}
+  .pill-unpaid{background:var(--amber-soft); color:#9a6a00;}
+  .pill-submitted{background:var(--purple-soft); color:var(--purple);}
+  .pill-approved{background:var(--teal-soft); color:var(--teal);}
+  .pill-rejected{background:#FBE7E6; color:var(--red);}
+  .nav-count{background:var(--red); color:#fff; font-size:10px; font-weight:700; padding:1px 7px; border-radius:20px; min-width:18px; text-align:center; display:inline-block;}
+  .navlist button.has-badge{justify-content:space-between;}
+  .bank-details-card .row{display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px dashed var(--border); font-size:13.5px;}
+  .bank-details-card .row:last-child{border-bottom:none;}
+  .bank-details-card .row .k{color:var(--ink-soft);}
+  .bank-details-card .row .v{font-weight:600; text-align:right;}
+  .bill-card{border:1px solid var(--border); border-radius:14px; padding:16px 18px; margin-bottom:14px;}
+  .bill-card .bill-top{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:8px;}
+  .bill-card .bill-amount{font-family:'JetBrains Mono'; font-weight:700; font-size:18px; color:var(--primary);}
+  .receipt-preview{max-width:200px; max-height:200px; border-radius:10px; border:1px solid var(--border); display:block; margin-top:10px; object-fit:cover;}
+  .bill-alert-banner{background:var(--amber-soft); color:#8a5a00; border:1px solid #f0d8a0; border-radius:12px; padding:14px 16px; margin-bottom:18px; font-size:13.5px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+
   table.simple{width:100%; border-collapse:collapse;}
   table.simple th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:8px 10px; border-bottom:1px solid var(--border);}
   table.simple td{padding:10px; border-bottom:1px solid var(--border); font-size:13px;}
@@ -944,6 +962,7 @@
       </div>
       <nav class="navlist" id="navlist">
         <button data-view="dashboard" class="active"><span class="ic">🛰️</span> Dashboard</button>
+        <button data-view="billing" class="has-badge"><span style="display:flex; align-items:center; gap:10px;"><span class="ic">💳</span> Billing</span> <span class="nav-count" id="navBillingBadge" style="display:none;">0</span></button>
         <button data-view="missions"><span class="ic">🗂️</span> Missions</button>
         <button data-view="rankingpapers"><span class="ic">🏅</span> Ranking Papers</button>
         <button data-view="plans"><span class="ic">📚</span> Study Plans</button>
@@ -995,6 +1014,8 @@
             </div>
           </div>
         </div>
+
+        <div id="billAlertBannerWrap"></div>
 
         <div class="grid grid-2" style="margin-bottom:18px;">
           <div class="id-card">
@@ -1073,6 +1094,27 @@
             <p class="small-note" style="margin-top:10px;">🔑 The secret code only appears near the end of that mission's discussion video — it's how you unlock the marking scheme and your marked answer sheet, so it pays to actually watch it.</p>
           </div>
         </div>
+      </section>
+
+      <!-- ---------- BILLING ---------- -->
+      <section class="view" id="view-billing">
+        <div class="topbar">
+          <div>
+            <h2>💳 Billing</h2>
+            <div class="sub">Bills your teacher has sent you, plus how to pay them.</div>
+          </div>
+        </div>
+
+        <div class="card bank-details-card" style="margin-bottom:18px;" id="bankDetailsCard">
+          <h3><span class="ic">🏦</span> Bank Details &amp; Payment Methods</h3>
+          <div id="bankDetailsBody"></div>
+        </div>
+
+        <div class="card" id="notificationPromptCard" style="margin-bottom:14px; display:none;">
+          <p class="small-note">🔔 Want a browser notification the moment your teacher sends a bill? <button class="btn btn-ghost btn-sm" id="enableNotifsBtn">Enable Notifications</button></p>
+        </div>
+
+        <div id="myBillsWrap"></div>
       </section>
 
       <!-- ---------- MISSIONS ---------- -->
@@ -1347,6 +1389,10 @@ let MISSIONS = [];
 let STUDY_PLANS = [];
 let RANKING_PAPERS = [];
 let STORE_VIDEOS = [];
+let MY_BILLS = [];
+let BILLING_SETTINGS = {};
+let billsListenerUnsub = null;
+let firstBillsSnapshot = true;
 
 // Shown only when the teacher hasn't published anything in the "store"
 // Firestore collection yet, so the feature is visible/testable right away.
@@ -1439,12 +1485,26 @@ async function loadCollection(name){
     return [];
   }
 }
+async function loadBillingSettings(){
+  try{
+    const snap = await db.collection('settings').doc('billing').get();
+    return snap.exists ? snap.data() : {};
+  }catch(e){ console.error(e); return {}; }
+}
+async function loadMyBills(){
+  try{
+    const snap = await db.collection('bills').where('studentKey','==',profile._key).get();
+    return snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }catch(e){ console.error(e); return []; }
+}
 async function loadAllContent(){
-  [MISSIONS, STUDY_PLANS, RANKING_PAPERS, STORE_VIDEOS] = await Promise.all([
+  [MISSIONS, STUDY_PLANS, RANKING_PAPERS, STORE_VIDEOS, BILLING_SETTINGS, MY_BILLS] = await Promise.all([
     loadCollection('missions'),
     loadCollection('studyPlans'),
     loadCollection('rankingPapers'),
     loadCollection('store'),
+    loadBillingSettings(),
+    loadMyBills(),
   ]);
 }
 
@@ -1832,6 +1892,7 @@ async function enterApp(key, name, existingDoc){
   document.getElementById('loadingScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   renderAll();
+  setupBillsRealtimeListener();
   playBootAnimation(profile.name || name, profile.xp || 0);
 }
 
@@ -1855,6 +1916,8 @@ document.getElementById('logoutLink').addEventListener('click', ()=>{
   document.getElementById('loginCode').value = '';
   clearLoginError();
   profile = null;
+  if(billsListenerUnsub){ billsListenerUnsub(); billsListenerUnsub = null; }
+  MY_BILLS = [];
 });
 
 async function saveProfile(){
@@ -1961,6 +2024,7 @@ function renderAll(){
   renderDashboard();
   renderMissionsList();
   renderRPListView();
+  renderBilling();
 }
 function renderView(name){
   if(name==='dashboard') renderDashboard();
@@ -1974,6 +2038,7 @@ function renderView(name){
   if(name==='hof') renderHallOfFame();
   if(name==='planner') renderPlannerView();
   if(name==='pygame') renderPythonArena();
+  if(name==='billing') renderBilling();
 }
 
 function renderShell(){
@@ -1999,6 +2064,7 @@ function renderShell(){
 /* ---------------- DASHBOARD ---------------- */
 function renderDashboard(){
   renderShell();
+  renderBillAlertBanner();
   document.getElementById('topXp').textContent = '🪙 ' + profile.xp;
   document.getElementById('idName').textContent = profile.name;
   document.getElementById('idAvatar').innerHTML = avatarInnerHTML(profile);
@@ -4995,6 +5061,220 @@ function formatMins(mins){
 
 })();
 
+/* ============================================================
+   BILLING
+   ============================================================ */
+function billStatusPillHTML(status){
+  const labels = {unpaid:'Unpaid', submitted:'Waiting for Review', approved:'Paid ✓', rejected:'Rejected'};
+  return `<span class="pill pill-${status||'unpaid'}">${labels[status]||status}</span>`;
+}
+function formatMoney(amount){
+  const cur = (BILLING_SETTINGS && BILLING_SETTINGS.currency) || '';
+  const n = Number(amount)||0;
+  return `${cur?cur+' ':''}${n.toLocaleString(undefined,{minimumFractionDigits:n%1===0?0:2, maximumFractionDigits:2})}`;
+}
+
+function updateBillingNavBadge(){
+  const badge = document.getElementById('navBillingBadge');
+  if(!badge) return;
+  const count = MY_BILLS.filter(b=>b.status==='unpaid'||b.status==='rejected').length;
+  if(count>0){ badge.style.display='inline-block'; badge.textContent = count; }
+  else { badge.style.display = 'none'; }
+}
+
+function renderBillAlertBanner(){
+  const wrap = document.getElementById('billAlertBannerWrap');
+  if(!wrap) return;
+  const outstanding = MY_BILLS.filter(b=>b.status==='unpaid'||b.status==='rejected');
+  if(outstanding.length===0){ wrap.innerHTML=''; return; }
+  const total = outstanding.reduce((s,b)=>s+(Number(b.amount)||0),0);
+  wrap.innerHTML = `<div class="bill-alert-banner">
+    <div>💳 You have <b>${outstanding.length}</b> outstanding bill${outstanding.length===1?'':'s'} totalling <b>${formatMoney(total)}</b>.</div>
+    <button class="btn btn-amber btn-sm" data-goto-billing="1">Go to Billing →</button>
+  </div>`;
+  const btn = wrap.querySelector('[data-goto-billing]');
+  if(btn) btn.addEventListener('click', ()=>{
+    document.querySelector('#navlist button[data-view="billing"]').click();
+  });
+}
+
+function renderBankDetailsBody(){
+  const el = document.getElementById('bankDetailsBody');
+  if(!el) return;
+  const s = BILLING_SETTINGS || {};
+  const hasAny = s.bankName || s.accountNumber || s.otherMethods;
+  if(!hasAny){
+    el.innerHTML = `<div class="empty-note">Your teacher hasn't added payment details yet.</div>`;
+    return;
+  }
+  const rows = [];
+  if(s.bankName) rows.push(['Bank', s.bankName]);
+  if(s.accountName) rows.push(['Account Name', s.accountName]);
+  if(s.accountNumber) rows.push(['Account Number', s.accountNumber]);
+  if(s.branch) rows.push(['Branch', s.branch]);
+  el.innerHTML = rows.map(([k,v])=>`<div class="row"><span class="k">${escapeHtml(k)}</span><span class="v mono">${escapeHtml(v)}</span></div>`).join('')
+    + (s.otherMethods ? `<div class="row" style="border-bottom:none; flex-direction:column; align-items:flex-start; gap:4px;"><span class="k">Other Payment Methods</span><span class="v" style="text-align:left; white-space:pre-wrap;">${escapeHtml(s.otherMethods)}</span></div>` : '');
+}
+
+function renderBilling(){
+  if(!profile) return;
+  renderBankDetailsBody();
+  renderMyBillsList();
+  updateBillingNavBadge();
+  const notifCard = document.getElementById('notificationPromptCard');
+  if(notifCard){
+    const supported = typeof Notification !== 'undefined';
+    notifCard.style.display = (supported && Notification.permission==='default') ? 'block' : 'none';
+  }
+}
+
+function renderMyBillsList(){
+  const wrap = document.getElementById('myBillsWrap');
+  if(!wrap) return;
+  if(MY_BILLS.length===0){
+    wrap.innerHTML = `<div class="card"><div class="empty-note">No bills yet — your teacher hasn't sent you anything.</div></div>`;
+    return;
+  }
+  const sorted = [...MY_BILLS].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  wrap.innerHTML = sorted.map(b=>{
+    const needsAction = b.status==='unpaid' || b.status==='rejected';
+    return `<div class="bill-card">
+      <div class="bill-top">
+        <div>
+          <div style="font-weight:700; font-size:15px;">${escapeHtml(b.label)}</div>
+          <div class="bill-amount">${formatMoney(b.amount)}</div>
+        </div>
+        ${billStatusPillHTML(b.status)}
+      </div>
+      ${b.note ? `<p class="small-note">${escapeHtml(b.note)}</p>` : ''}
+      ${b.status==='rejected' && b.reviewNote ? `<p class="small-note" style="color:var(--red);">Teacher's note: ${escapeHtml(b.reviewNote)}</p>` : ''}
+      ${b.status==='approved' ? `<p class="small-note" style="color:var(--teal);">Confirmed by your teacher${b.reviewedAt ? ' on '+new Date(b.reviewedAt).toLocaleDateString() : ''}.${b.reviewNote ? ' “'+escapeHtml(b.reviewNote)+'”' : ''}</p>` : ''}
+      ${b.status==='submitted' ? `<p class="small-note">Receipt uploaded${b.submittedAt ? ' on '+new Date(b.submittedAt).toLocaleString() : ''} — waiting for your teacher to confirm.</p>` : ''}
+      ${b.receiptImage ? `<img class="receipt-preview" src="${escapeAttr(b.receiptImage)}">` : ''}
+      ${needsAction ? `
+        <input type="file" accept="image/*" style="display:none;" id="receiptInput_${b.id}">
+        <div class="link-row" style="margin-top:10px;">
+          <button class="btn btn-teal btn-sm" data-attach-receipt="${b.id}">📎 Attach Receipt &amp; Pay</button>
+        </div>
+        <p class="small-note" id="receiptStatus_${b.id}"></p>
+      ` : ''}
+    </div>`;
+  }).join('');
+
+  sorted.forEach(b=>{
+    const btn = wrap.querySelector(`[data-attach-receipt="${b.id}"]`);
+    if(btn){
+      const input = document.getElementById(`receiptInput_${b.id}`);
+      btn.addEventListener('click', ()=>{ input.click(); });
+      input.addEventListener('change', async (e)=>{
+        const file = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if(!file) return;
+        await uploadReceiptForBill(b.id, file);
+      });
+    }
+  });
+}
+
+async function uploadReceiptForBill(billId, file){
+  const statusNote = document.getElementById(`receiptStatus_${billId}`);
+  if(!file.type.startsWith('image/')){ if(statusNote) statusNote.textContent = 'Please choose an image file.'; return; }
+  if(statusNote) statusNote.textContent = 'Uploading…';
+  try{
+    let quality = 0.75, maxSize = 900, dataUrl = await fileToReceiptDataURL(file, maxSize, quality);
+    // Firestore fields have a size limit — if it's still too big, compress harder.
+    while(dataUrl.length > 850000 && quality > 0.3){
+      quality -= 0.15;
+      dataUrl = await fileToReceiptDataURL(file, maxSize, quality);
+    }
+    if(dataUrl.length > 950000){
+      if(statusNote) statusNote.textContent = 'That image is too large even after compression — please try a smaller photo.';
+      return;
+    }
+    const update = {status:'submitted', receiptImage:dataUrl, submittedAt: Date.now(), reviewNote:'', reviewedAt:null, updatedAt: Date.now()};
+    await db.collection('bills').doc(billId).update(update);
+    const bill = MY_BILLS.find(x=>x.id===billId);
+    if(bill) Object.assign(bill, update);
+    renderMyBillsList();
+    renderBillAlertBanner();
+    updateBillingNavBadge();
+  }catch(err){
+    console.error(err);
+    if(statusNote) statusNote.textContent = 'Could not upload that receipt — please try again.';
+  }
+}
+
+// Like fileToCompressedDataURL (used for profile photos), but keeps the
+// receipt's full rectangular shape instead of cropping to a square, since
+// receipts/screenshots are usually tall rather than square.
+function fileToReceiptDataURL(file, maxSize=900, quality=0.75){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read file'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not read image'));
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if(w > maxSize || h > maxSize){
+          if(w > h){ h = Math.round(h * maxSize / w); w = maxSize; }
+          else { w = Math.round(w * maxSize / h); h = maxSize; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------------- Best-effort browser notifications ----------------
+   True background push (notified even when the site/tab is fully closed)
+   needs a paid Firebase plan + Cloud Functions + a service worker. This is
+   the lightweight version: while this tab is open and logged in, we watch
+   this student's bills in real time and fire a local browser notification
+   the moment a new bill appears or a receipt gets reviewed. If the tab or
+   browser is closed, no notification will arrive until they reopen it. */
+document.getElementById('enableNotifsBtn')?.addEventListener('click', async ()=>{
+  if(typeof Notification === 'undefined'){ alert('Notifications are not supported in this browser.'); return; }
+  await Notification.requestPermission();
+  renderBilling();
+});
+
+function notifyBrowser(title, body){
+  if(typeof Notification === 'undefined') return;
+  if(Notification.permission !== 'granted') return;
+  try{ new Notification(title, {body}); }catch(e){ console.error(e); }
+}
+
+function setupBillsRealtimeListener(){
+  if(!db || !profile) return;
+  if(billsListenerUnsub){ billsListenerUnsub(); }
+  firstBillsSnapshot = true;
+  billsListenerUnsub = db.collection('bills').where('studentKey','==',profile._key)
+    .onSnapshot(snap=>{
+      const fresh = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      if(!firstBillsSnapshot){
+        fresh.forEach(b=>{
+          const prev = MY_BILLS.find(x=>x.id===b.id);
+          if(!prev){
+            notifyBrowser('New bill — EICT Online', `${b.label}: ${formatMoney(b.amount)}`);
+          } else if(prev.status !== b.status && (b.status==='approved' || b.status==='rejected')){
+            notifyBrowser('Payment update — EICT Online', `${b.label}: ${b.status==='approved' ? 'confirmed ✓' : 'needs attention — check the note'}`);
+          }
+        });
+      }
+      MY_BILLS = fresh;
+      firstBillsSnapshot = false;
+      if(currentView==='billing') renderMyBillsList();
+      renderBillAlertBanner();
+      updateBillingNavBadge();
+    }, err=>console.error('Bills listener error', err));
+}
 
 </script>
 </body>
