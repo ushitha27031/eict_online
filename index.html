@@ -968,6 +968,7 @@
         <button data-view="plans"><span class="ic">📚</span> Study Plans</button>
         <button data-view="leaderboard"><span class="ic">🏆</span> Leaderboard</button>
         <button data-view="store"><span class="ic">🎬</span> Video Store</button>
+        <button data-view="simulators"><span class="ic">🧪</span> Simulators</button>
         <button data-view="rewards"><span class="ic">🎁</span> Rewards</button>
         <button data-view="about"><span class="ic">ℹ️</span> How It Works</button>
         <button data-view="stats"><span class="ic">📊</span> Mission Stats</button>
@@ -1183,6 +1184,17 @@
         <div class="grid grid-3" id="storeWrap"></div>
       </section>
 
+      <!-- ---------- SIMULATORS ---------- -->
+      <section class="view" id="view-simulators">
+        <div class="topbar">
+          <div>
+            <h2>🧪 Simulators</h2>
+            <div class="sub">Interactive simulators you can try right in your browser — on your phone or your computer. Each one opens in a new tab.</div>
+          </div>
+        </div>
+        <div class="grid grid-3" id="simulatorsWrap"></div>
+      </section>
+
       <!-- ---------- REWARDS ---------- -->
       <section class="view" id="view-rewards">
         <div class="topbar">
@@ -1389,6 +1401,7 @@ let MISSIONS = [];
 let STUDY_PLANS = [];
 let RANKING_PAPERS = [];
 let STORE_VIDEOS = [];
+let SIMULATORS = [];
 let MY_BILLS = [];
 let BILLING_SETTINGS = {};
 let billsListenerUnsub = null;
@@ -1498,11 +1511,12 @@ async function loadMyBills(){
   }catch(e){ console.error(e); return []; }
 }
 async function loadAllContent(){
-  [MISSIONS, STUDY_PLANS, RANKING_PAPERS, STORE_VIDEOS, BILLING_SETTINGS, MY_BILLS] = await Promise.all([
+  [MISSIONS, STUDY_PLANS, RANKING_PAPERS, STORE_VIDEOS, SIMULATORS, BILLING_SETTINGS, MY_BILLS] = await Promise.all([
     loadCollection('missions'),
     loadCollection('studyPlans'),
     loadCollection('rankingPapers'),
     loadCollection('store'),
+    loadCollection('simulators'),
     loadBillingSettings(),
     loadMyBills(),
   ]);
@@ -2033,6 +2047,7 @@ function renderView(name){
   if(name==='plans') renderStudyPlans();
   if(name==='leaderboard') renderLeaderboard();
   if(name==='store') renderStore();
+  if(name==='simulators') renderSimulators();
   if(name==='rewards') renderRewards();
   if(name==='stats') renderStats();
   if(name==='hof') renderHallOfFame();
@@ -3037,6 +3052,30 @@ async function handleBuyVideo(videoId, items){
   await saveProfile();
   renderDashboard();
   renderStore();
+}
+
+/* ---------------- SIMULATORS ---------------- */
+function renderSimulators(){
+  const wrap = document.getElementById('simulatorsWrap');
+  if(SIMULATORS.length===0){
+    wrap.innerHTML = `<div class="empty-note">No simulators published yet — check back soon!</div>`;
+    return;
+  }
+  wrap.innerHTML = SIMULATORS.map(s=>`<div class="video-card">
+      <div class="video-thumb">🧪</div>
+      <div class="video-body">
+        <h4>${escapeHtml(s.title)}</h4>
+        <p>${escapeHtml(s.description||'')}</p>
+        <button class="btn btn-teal btn-sm" data-launch-sim="${escapeAttr(s.id)}" style="margin-top:auto;">🚀 Launch Simulator</button>
+      </div>
+    </div>`).join('');
+
+  wrap.querySelectorAll('[data-launch-sim]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const s = SIMULATORS.find(x=>x.id===btn.dataset.launchSim);
+      openLinkOrWarn(s && s.link, 'simulator');
+    });
+  });
 }
 
 /* ---------------- REWARDS ---------------- */
