@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emotion Reader — On-device Facial Expression Detection</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark" aria-hidden="true">◆</span>
+      <div class="brand__text">
+        <h1>Emotion Reader</h1>
+        <p>On-device facial expression detection</p>
+      </div>
+    </div>
+    <div class="status" id="status">
+      <span class="status__dot" id="statusDot"></span>
+      <span id="statusText">Loading models…</span>
+    </div>
+  </header>
+
+  <main class="stage">
+
+    <section class="camera-panel" id="cameraPanel">
+      <div class="camera-frame" id="cameraFrame">
+        <div class="corner corner--tl"></div>
+        <div class="corner corner--tr"></div>
+        <div class="corner corner--bl"></div>
+        <div class="corner corner--br"></div>
+        <div class="sweep" id="sweep" aria-hidden="true"></div>
+
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+
+        <div class="camera-placeholder" id="cameraPlaceholder">
+          <p>Camera is off</p>
+          <button id="startBtn" class="btn btn--primary">Start camera</button>
+        </div>
+      </div>
+
+      <div class="camera-controls">
+        <button id="stopBtn" class="btn btn--ghost" disabled>Stop camera</button>
+        <p class="privacy-note">All video processing happens locally in this browser tab. Nothing is uploaded anywhere.</p>
+      </div>
+    </section>
+
+    <aside class="readout-panel">
+
+      <div class="readout-card readout-card--primary">
+        <p class="readout-label">Dominant expression</p>
+        <div class="readout-primary" id="primaryReadout">
+          <span class="readout-icon" id="primaryIcon">–</span>
+          <span class="readout-word" id="primaryWord">Waiting…</span>
+        </div>
+        <p class="readout-confidence" id="primaryConfidence">confidence —</p>
+      </div>
+
+      <div class="readout-card">
+        <p class="readout-label">Full breakdown</p>
+        <ul class="bars" id="bars">
+          <!-- bars injected by JS -->
+        </ul>
+      </div>
+
+      <div class="readout-card readout-card--faces">
+        <p class="readout-label">Faces tracked</p>
+        <p class="face-count" id="faceCount">0</p>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <footer class="foot">
+    <p>Model: TinyFaceDetector + 68-point landmarks + expression net (face-api.js, running via TensorFlow.js in-browser)</p>
+  </footer>
+
+  <script src="lib/face-api.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

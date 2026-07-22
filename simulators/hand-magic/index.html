@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hand Magic — Live Hand Tracking</title>
+
+<!-- Fonts: Cinzel for the "spellbook" display type, Space Grotesk for the tech/HUD readouts, Inter for body copy -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink: #090b14;
+    --ink-2: #12162a;
+    --ink-3: #1a1f3a;
+    --violet: #7c3aed;
+    --violet-light: #a78bfa;
+    --gold: #ffd166;
+    --cyan: #4cc9f0;
+    --teal: #5eead4;
+    --magenta: #c084fc;
+    --parchment: #ede7f9;
+    --muted: #9c93c0;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 50% 20%, var(--ink-2) 0%, var(--ink) 60%);
+    color: var(--parchment);
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* faint drifting stardust in the background for atmosphere */
+  #stardust{
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .page{
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 36px 20px 28px;
+  }
+
+  header{
+    text-align: center;
+    margin-bottom: 22px;
+  }
+
+  .eyebrow{
+    font-family: 'Space Grotesk', monospace;
+    font-size: 12px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    opacity: 0.85;
+    margin-bottom: 10px;
+  }
+
+  h1{
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: clamp(28px, 5vw, 46px);
+    letter-spacing: 0.12em;
+    margin: 0 0 10px;
+    background: linear-gradient(90deg, var(--gold), var(--violet-light) 55%, var(--cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .subtitle{
+    max-width: 520px;
+    margin: 0 auto;
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+
+  /* ---- the scrying portal ---- */
+  .portal-wrap{
+    position: relative;
+    width: min(90vw, 900px);
+    aspect-ratio: 4 / 3;
+    border-radius: 28px;
+    padding: 3px;
+    background: conic-gradient(from var(--rot, 0deg), var(--violet), var(--cyan), var(--gold), var(--magenta), var(--violet));
+    animation: rotateBorder 8s linear infinite;
+    box-shadow: 0 0 60px rgba(124, 58, 237, 0.35), 0 0 120px rgba(76, 201, 240, 0.15);
+  }
+
+  @keyframes rotateBorder{
+    to{ --rot: 360deg; }
+  }
+  @property --rot{
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  .portal{
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 25px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  canvas#output{
+    width: 100%;
+    height: 100%;
+    display: block;
+    transform: scaleX(1); /* mirroring is handled in the draw call itself */
+  }
+
+  video#input{
+    display: none;
+  }
+
+  /* overlay states: loading / error / permission */
+  .overlay-msg{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px;
+    background: rgba(9, 11, 20, 0.92);
+    gap: 14px;
+    transition: opacity 0.3s ease;
+  }
+  .overlay-msg.hidden{ opacity: 0; pointer-events: none; }
+  .overlay-msg h2{
+    font-family: 'Space Grotesk', monospace;
+    font-size: 18px;
+    margin: 0;
+    color: var(--gold);
+  }
+  .overlay-msg p{
+    color: var(--muted);
+    font-size: 13.5px;
+    max-width: 420px;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .overlay-msg code{
+    background: var(--ink-3);
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: var(--teal);
+    font-family: 'Space Grotesk', monospace;
+    font-size: 12.5px;
+  }
+  .spinner{
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 3px solid rgba(167, 139, 250, 0.25);
+    border-top-color: var(--violet-light);
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  /* ---- HUD chips ---- */
+  .hud{
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .chip{
+    font-family: 'Space Grotesk', monospace;
+    font-size: 12.5px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(167, 139, 250, 0.25);
+    padding: 8px 14px;
+    border-radius: 999px;
+    color: var(--parchment);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    backdrop-filter: blur(6px);
+  }
+  .chip .dot{
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 8px var(--teal);
+  }
+  .chip .label{ color: var(--muted); }
+  .chip .value{ color: var(--gold); font-weight: 600; }
+
+  /* ---- bottom instruction strip ---- */
+  .instructions{
+    margin-top: 22px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+    max-width: 560px;
+  }
+  .instructions strong{ color: var(--violet-light); font-weight: 600; }
+
+  .controls{
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button.ghost-btn{
+    font-family: 'Space Grotesk', monospace;
+    font-size: 12.5px;
+    background: transparent;
+    border: 1px solid rgba(167, 139, 250, 0.4);
+    color: var(--violet-light);
+    padding: 9px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  button.ghost-btn:hover{
+    background: rgba(124, 58, 237, 0.15);
+    color: var(--parchment);
+  }
+  button.ghost-btn.active{
+    background: var(--violet);
+    color: var(--ink);
+    border-color: var(--violet);
+  }
+
+  .explainer{
+    max-width: 620px;
+    margin: 16px auto 0;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(167,139,250,0.2);
+    border-radius: 14px;
+    padding: 16px 18px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--muted);
+    display: none;
+  }
+  .explainer.open{ display: block; }
+  .explainer b{ color: var(--parchment); }
+
+  footer{
+    margin-top: 26px;
+    font-size: 11.5px;
+    color: rgba(156, 147, 192, 0.55);
+    text-align: center;
+  }
+
+  @media (max-width: 560px){
+    .portal-wrap{ width: 94vw; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stardust"></canvas>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">Live · Browser · Machine Learning</div>
+    <h1>HAND MAGIC</h1>
+    <p class="subtitle">
+      Show your hand to the camera. A neural network finds 21 points on your hand,
+      over and over, many times per second — and we turn that into light.
+    </p>
+  </header>
+
+  <div class="portal-wrap">
+    <div class="portal">
+      <video id="input" playsinline autoplay muted></video>
+      <canvas id="output"></canvas>
+
+      <div id="loadingMsg" class="overlay-msg">
+        <div class="spinner"></div>
+        <h2>Summoning the camera…</h2>
+        <p>Loading the hand-tracking model and asking your browser for camera access.</p>
+      </div>
+
+      <div id="errorMsg" class="overlay-msg hidden">
+        <h2>⚠ The mirror is dark</h2>
+        <p id="errorText">Something kept the camera from starting.</p>
+        <p>
+          This page needs to run from a local server (not opened directly as a file), and
+          your browser needs permission to use the camera. Try:
+          <br><br>
+          <code>python3 -m http.server 8000</code><br>
+          then open <code>http://localhost:8000</code> in Chrome or Edge.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="chip"><span class="dot" id="statusDot"></span><span class="label">status</span><span class="value" id="statusVal">starting</span></div>
+    <div class="chip"><span class="label">hands seen</span><span class="value" id="handsVal">0</span></div>
+    <div class="chip"><span class="label">landmarks / hand</span><span class="value">21</span></div>
+    <div class="chip"><span class="label">motion energy</span><span class="value" id="energyVal">0%</span></div>
+    <div class="chip"><span class="label">fps</span><span class="value" id="fpsVal">0</span></div>
+  </div>
+
+  <p class="instructions">
+    Hold one or both hands in view of the camera. <strong>Move quickly</strong> to charge sparks and
+    ripples, <strong>open your palm wide</strong> to build a slow pulse, <strong>make a fist</strong> to
+    trigger a burst, and <strong>pinch thumb to index finger</strong> to cast a spark. Bring both hands
+    close together to braid their energy into one.
+  </p>
+
+  <div class="controls">
+    <button class="ghost-btn" id="toggleIndices">Show landmark numbers</button>
+    <button class="ghost-btn" id="toggleCalm">Calm mode</button>
+    <button class="ghost-btn" id="toggleExplain">How does this work?</button>
+  </div>
+
+  <div class="explainer" id="explainerBox">
+    <p style="margin:0 0 10px 0;"><b>What's actually happening:</b> your webcam video never leaves your
+    computer. A small model (called MediaPipe Hands, made by Google) runs entirely inside your browser
+    and looks at each video frame to guess the position of <b>21 key points</b> on every hand it sees —
+    the tip and joints of each finger, plus the wrist. That's the same basic idea behind sign-language
+    tools, AR filters, and touchless gesture controls.</p>
+    <p style="margin:0 0 10px 0;">The lines you see are <b>this page's own artwork</b>, layered a few
+    ways: the finger "bones" get a glow plus a bright core plus a little pulse of light traveling along
+    them; a faint web connects the fingertips to each other; and a rotating ring behind the palm grows
+    or shrinks with how open your hand is.</p>
+    <p style="margin:0;">The effects react to <b>motion</b>: this page compares each hand's position
+    frame to frame, and the faster it moves, the more sparks, ripples, and glow you get — that's the
+    "motion energy" reading in the HUD. Fist and open-palm shapes are detected with simple distance
+    math (how far the fingertips sit from the palm's center), which is enough to trigger their own
+    burst effects without anything fancier than geometry.</p>
+  </div>
+
+  <footer>Runs 100% locally in your browser · no video is uploaded anywhere · built with MediaPipe Hands</footer>
+</div>
+
+<!-- MediaPipe Hands + camera helper, loaded from CDN and executed in the visitor's browser -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------------------------------------------------------------
+   * 0. Background stardust (purely decorative, cheap ambient animation)
+   * ------------------------------------------------------------------- */
+  const dustCanvas = document.getElementById('stardust');
+  const dustCtx = dustCanvas.getContext('2d');
+  let stars = [];
+  function sizeDust(){
+    dustCanvas.width = window.innerWidth;
+    dustCanvas.height = window.innerHeight;
+    const count = Math.floor((dustCanvas.width * dustCanvas.height) / 22000);
+    stars = Array.from({length: count}, () => ({
+      x: Math.random() * dustCanvas.width,
+      y: Math.random() * dustCanvas.height,
+      r: Math.random() * 1.4 + 0.3,
+      phase: Math.random() * Math.PI * 2,
+      speed: Math.random() * 0.015 + 0.005
+    }));
+  }
+  function drawDust(t){
+    dustCtx.clearRect(0, 0, dustCanvas.width, dustCanvas.height);
+    for(const s of stars){
+      const a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(t * s.speed + s.phase));
+      dustCtx.beginPath();
+      dustCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      dustCtx.fillStyle = `rgba(167, 139, 250, ${a.toFixed(2)})`;
+      dustCtx.fill();
+    }
+    requestAnimationFrame(drawDust);
+  }
+  window.addEventListener('resize', sizeDust);
+  sizeDust();
+  requestAnimationFrame(drawDust);
+
+  /* ---------------------------------------------------------------------
+   * 1. Hand skeleton definition
+   *    Standard 21-point MediaPipe hand connections, grouped by finger so
+   *    each finger gets its own color in the "constellation" look.
+   * ------------------------------------------------------------------- */
+  const FINGER_GROUPS = {
+    thumb:  { pairs: [[0,1],[1,2],[2,3],[3,4]],       color: '#ffd166' },
+    index:  { pairs: [[0,5],[5,6],[6,7],[7,8]],       color: '#a78bfa' },
+    middle: { pairs: [[5,9],[9,10],[10,11],[11,12]],  color: '#4cc9f0' },
+    ring:   { pairs: [[9,13],[13,14],[14,15],[15,16]],color: '#c084fc' },
+    pinky:  { pairs: [[13,17],[17,18],[18,19],[19,20]],color:'#5eead4' },
+    palm:   { pairs: [[0,17]],                        color: '#c7b8f0' }
+  };
+  const FINGERTIPS = [4, 8, 12, 16, 20];
+  // FINGERTIPS order is thumb, index, middle, ring, pinky — matches these colors 1:1
+  const FINGER_COLORS = ['#ffd166', '#a78bfa', '#4cc9f0', '#c084fc', '#5eead4'];
+  const CENTROID_INDICES = [0, 5, 9, 13, 17];
+
+  /* ---------------------------------------------------------------------
+   * 2. DOM references
+   * ------------------------------------------------------------------- */
+  const videoEl = document.getElementById('input');
+  const canvas = document.getElementById('output');
+  const ctx = canvas.getContext('2d');
+
+  const loadingMsg = document.getElementById('loadingMsg');
+  const errorMsg = document.getElementById('errorMsg');
+  const errorText = document.getElementById('errorText');
+
+  const statusDot = document.getElementById('statusDot');
+  const statusVal = document.getElementById('statusVal');
+  const handsVal = document.getElementById('handsVal');
+  const fpsVal = document.getElementById('fpsVal');
+
+  const energyVal = document.getElementById('energyVal');
+
+  const toggleIndicesBtn = document.getElementById('toggleIndices');
+  const toggleExplainBtn = document.getElementById('toggleExplain');
+  const toggleCalmBtn = document.getElementById('toggleCalm');
+  const explainerBox = document.getElementById('explainerBox');
+
+  let showIndices = false;
+  let explainerOpen = false;
+
+  // respects the OS-level "reduce motion" preference automatically; calm
+  // mode is the same idea but under the visitor's manual control
+  const systemPrefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let calmMode = systemPrefersReducedMotion;
+  if(calmMode){
+    toggleCalmBtn.classList.add('active');
+    toggleCalmBtn.textContent = 'Calm mode: on';
+  }
+
+  toggleIndicesBtn.addEventListener('click', () => {
+    showIndices = !showIndices;
+    toggleIndicesBtn.classList.toggle('active', showIndices);
+    toggleIndicesBtn.textContent = showIndices ? 'Hide landmark numbers' : 'Show landmark numbers';
+  });
+  toggleExplainBtn.addEventListener('click', () => {
+    explainerOpen = !explainerOpen;
+    explainerBox.classList.toggle('open', explainerOpen);
+    toggleExplainBtn.classList.toggle('active', explainerOpen);
+  });
+  toggleCalmBtn.addEventListener('click', () => {
+    calmMode = !calmMode;
+    toggleCalmBtn.classList.toggle('active', calmMode);
+    toggleCalmBtn.textContent = calmMode ? 'Calm mode: on' : 'Calm mode';
+  });
+
+  /* ---------------------------------------------------------------------
+   * 2b. Per-hand motion & gesture state (two slots, one per tracked hand)
+   * ------------------------------------------------------------------- */
+  let auraHue = 200;
+  const energy = [0, 0];
+  const prevPositions = [null, null];
+  const handHistory = [[], []];
+  const gestureState = ['neutral', 'neutral'];
+  const lastShockwaveTime = [0, 0];
+  let shockwaves = [];
+  let tetherMerged = false;
+
+  const OPEN_THRESHOLD = 1.55;
+  const FIST_THRESHOLD = 0.85;
+  const ENERGY_SHOCK_THRESHOLD = 0.85;
+
+  function setStatus(text, ok){
+    statusVal.textContent = text;
+    statusDot.style.background = ok ? '#5eead4' : '#ffd166';
+    statusDot.style.boxShadow = ok ? '0 0 8px #5eead4' : '0 0 8px #ffd166';
+  }
+
+  function showError(message){
+    errorText.textContent = message;
+    loadingMsg.classList.add('hidden');
+    errorMsg.classList.remove('hidden');
+    setStatus('error', false);
+  }
+
+  /* ---------------------------------------------------------------------
+   * 3. Particle system (ambient sparkle + pinch bursts)
+   * ------------------------------------------------------------------- */
+  let particles = [];
+
+  function spawnParticle(x, y, colorList, speedMul){
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (0.6 + Math.random() * 1.6) * (speedMul || 1);
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 0.4,
+      life: 1,
+      decay: 0.012 + Math.random() * 0.018,
+      r: 1.2 + Math.random() * 2.2,
+      color: colorList[Math.floor(Math.random() * colorList.length)]
+    });
+    if(particles.length > 650) particles.shift();
+  }
+
+  function burst(x, y, colorList, n){
+    for(let i = 0; i < n; i++) spawnParticle(x, y, colorList, 2.6);
+  }
+
+  function updateAndDrawParticles(ctx){
+    ctx.save();
+    for(let i = particles.length - 1; i >= 0; i--){
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.01; // gentle gravity so sparks drift down as they die
+      p.life -= p.decay;
+      if(p.life <= 0){ particles.splice(i, 1); continue; }
+
+      ctx.globalAlpha = Math.max(p.life, 0);
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = p.color;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /* ---------------------------------------------------------------------
+   * 4. Pinch detection (per hand, edge-triggered so a burst fires once
+   *    per pinch rather than every frame while held)
+   * ------------------------------------------------------------------- */
+  const pinchState = [false, false];
+
+  /* ---------------------------------------------------------------------
+   * 4b. Shockwave rings — expanding pulses for gestures & sustained motion
+   * ------------------------------------------------------------------- */
+  function spawnShockwave(x, y, color){
+    shockwaves.push({ x, y, r: 8, alpha: 0.85, color: color || '#4cc9f0' });
+  }
+
+  function updateAndDrawShockwaves(ctx){
+    ctx.save();
+    for(let i = shockwaves.length - 1; i >= 0; i--){
+      const s = shockwaves[i];
+      s.r += 4.5;
+      s.alpha -= 0.028;
+      if(s.alpha <= 0){ shockwaves.splice(i, 1); continue; }
+      ctx.globalAlpha = s.alpha;
+      ctx.strokeStyle = s.color;
+      ctx.shadowColor = s.color;
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function checkPinch(landmarksPx, handIndex, energyLevel){
+    const thumb = landmarksPx[4];
+    const index = landmarksPx[8];
+    const wrist = landmarksPx[0];
+    const midMcp = landmarksPx[9];
+
+    const handSize = Math.hypot(midMcp.x - wrist.x, midMcp.y - wrist.y) || 1;
+    const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+    const isPinching = dist < handSize * 0.35;
+
+    if(isPinching && !pinchState[handIndex]){
+      const mx = (thumb.x + index.x) / 2;
+      const my = (thumb.y + index.y) / 2;
+      const count = Math.round(22 + Math.min(energyLevel, 1) * 20);
+      burst(mx, my, ['#ffd166', '#f9f4dc', '#a78bfa'], count);
+      spawnShockwave(mx, my, '#ffd166');
+    }
+    pinchState[handIndex] = isPinching;
+
+    return isPinching;
+  }
+
+  /* ---------------------------------------------------------------------
+   * 5. Motion tracking helpers: centroid, openness, per-hand "energy"
+   * ------------------------------------------------------------------- */
+  function computeCentroid(px, indices){
+    let sx = 0, sy = 0;
+    for(const idx of indices){ sx += px[idx].x; sy += px[idx].y; }
+    return { x: sx / indices.length, y: sy / indices.length };
+  }
+
+  function computeOpenness(px, centroid, handSize){
+    let total = 0;
+    for(const idx of FINGERTIPS){
+      total += Math.hypot(px[idx].x - centroid.x, px[idx].y - centroid.y);
+    }
+    return (total / FINGERTIPS.length) / handSize;
+  }
+
+  // compares this frame's key points to last frame's to get a 0..~1+ "how
+  // fast is this hand moving" reading, smoothed so it doesn't jitter
+  function updateEnergy(handIndex, px, handSize){
+    const sampleIdx = [0, 4, 8, 12, 16, 20];
+    const prev = prevPositions[handIndex];
+    let instant = 0;
+    if(prev){
+      let total = 0;
+      for(const idx of sampleIdx){
+        total += Math.hypot(px[idx].x - prev[idx].x, px[idx].y - prev[idx].y);
+      }
+      instant = Math.min((total / sampleIdx.length) / (handSize || 1), 3);
+    }
+    energy[handIndex] = energy[handIndex] * 0.75 + instant * 0.25;
+    prevPositions[handIndex] = px;
+    return energy[handIndex];
+  }
+
+  function updateHistory(handIndex, px, trailLength){
+    const hist = handHistory[handIndex];
+    hist.push(FINGERTIPS.map(idx => px[idx]));
+    if(hist.length > trailLength) hist.shift();
+  }
+
+  /* ---------------------------------------------------------------------
+   * 6. Fingertip motion trails — short fading ribbons that appear as
+   *    fingers move, instead of only lighting up while still
+   * ------------------------------------------------------------------- */
+  function drawFingertipTrails(ctx, handIndex){
+    const hist = handHistory[handIndex];
+    if(hist.length < 2) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for(let f = 0; f < FINGERTIPS.length; f++){
+      const color = FINGER_COLORS[f];
+      for(let k = 1; k < hist.length; k++){
+        const p0 = hist[k - 1][f];
+        const p1 = hist[k][f];
+        const fade = k / hist.length;
+        ctx.globalAlpha = fade * 0.45;
+        ctx.strokeStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 6;
+        ctx.lineWidth = 1 + fade * 2.4;
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /* ---------------------------------------------------------------------
+   * 7. Fingertip web — a faint geometric mesh across the palm, so the
+   *    hand reads as a construct of many crossing lines, not one strand
+   * ------------------------------------------------------------------- */
+  function drawMeshWeb(ctx, px, centroid, hue, energyLevel){
+    const tips = FINGERTIPS.map(idx => px[idx]);
+    const baseAlpha = 0.1 + Math.min(energyLevel * 0.18, 0.22);
+    ctx.save();
+    ctx.lineWidth = 1;
+    ctx.shadowBlur = 6;
+
+    tips.forEach((p, idx) => {
+      const c = `hsla(${(hue + idx * 20) % 360}, 80%, 72%, ${baseAlpha})`;
+      ctx.strokeStyle = c;
+      ctx.shadowColor = c;
+      ctx.beginPath();
+      ctx.moveTo(centroid.x, centroid.y);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    });
+
+    for(let a = 0; a < tips.length; a++){
+      for(let b = a + 1; b < tips.length; b++){
+        const c = `hsla(${(hue + a * 40 + b * 15) % 360}, 70%, 66%, ${baseAlpha * 0.7})`;
+        ctx.strokeStyle = c;
+        ctx.shadowColor = c;
+        ctx.beginPath();
+        ctx.moveTo(tips[a].x, tips[a].y);
+        ctx.lineTo(tips[b].x, tips[b].y);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /* ---------------------------------------------------------------------
+   * 8. Rune circle — a rotating ring behind the palm that breathes with
+   *    how open the hand is, and brightens with motion energy
+   * ------------------------------------------------------------------- */
+  function drawRuneCircle(ctx, centroid, handSize, openness, energyLevel, t){
+    const radius = handSize * (0.85 + Math.min(openness, 2.2) * 0.32);
+    ctx.save();
+    ctx.translate(centroid.x, centroid.y);
+    ctx.rotate(t / 4000);
+    const alpha = 0.14 + Math.min(energyLevel * 0.22, 0.28);
+    const color = `hsla(${(auraHue + 180) % 360}, 70%, 72%, ${alpha})`;
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const ticks = 12;
+    for(let k = 0; k < ticks; k++){
+      const ang = (k / ticks) * Math.PI * 2;
+      const r1 = radius * 0.85, r2 = radius * 1.06;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(ang) * r1, Math.sin(ang) * r1);
+      ctx.lineTo(Math.cos(ang) * r2, Math.sin(ang) * r2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /* ---------------------------------------------------------------------
+   * 9. Gesture bursts — fist = implosion, open palm = charge pulse
+   * ------------------------------------------------------------------- */
+  function implode(center, colors, n){
+    for(let k = 0; k < n; k++){
+      const ang = Math.random() * Math.PI * 2;
+      const r = 40 + Math.random() * 30;
+      const sx = center.x + Math.cos(ang) * r;
+      const sy = center.y + Math.sin(ang) * r;
+      particles.push({
+        x: sx, y: sy,
+        vx: (center.x - sx) / 16,
+        vy: (center.y - sy) / 16,
+        life: 1,
+        decay: 0.03 + Math.random() * 0.02,
+        r: 1.5 + Math.random() * 2,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      });
+    }
+  }
+
+  function handleGestureTransitions(handIndex, openness, centroid){
+    const prevState = gestureState[handIndex];
+    let state = 'neutral';
+    if(openness > OPEN_THRESHOLD) state = 'open';
+    else if(openness < FIST_THRESHOLD) state = 'fist';
+
+    if(state === 'fist' && prevState !== 'fist'){
+      implode(centroid, ['#c084fc', '#7c3aed', '#4cc9f0'], 24);
+    }
+    if(state === 'open' && prevState !== 'open'){
+      spawnShockwave(centroid.x, centroid.y, '#5eead4');
+    }
+    gestureState[handIndex] = state;
+  }
+
+  /* ---------------------------------------------------------------------
+   * 10. Hand skeleton — layered glow + bright core + a small light pulse
+   *     traveling along every bone, all reactive to motion energy
+   * ------------------------------------------------------------------- */
+  function drawSkeleton(ctx, px, t, energyLevel){
+    let boneCounter = 0;
+    for(const key in FINGER_GROUPS){
+      const group = FINGER_GROUPS[key];
+      for(const [a, b] of group.pairs){
+        const p1 = px[a], p2 = px[b];
+
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.strokeStyle = group.color;
+        ctx.shadowColor = group.color;
+        ctx.shadowBlur = 16 + energyLevel * 14;
+        ctx.lineWidth = 5 + energyLevel * 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.shadowColor = group.color;
+        ctx.shadowBlur = 6;
+        ctx.lineWidth = 1.6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        ctx.restore();
+
+        const s = ((t / 900) + boneCounter * 0.18) % 1;
+        const px_ = p1.x + (p2.x - p1.x) * s;
+        const py_ = p1.y + (p2.y - p1.y) * s;
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = '#fff8e7';
+        ctx.shadowColor = group.color;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(px_, py_, 2.2 + energyLevel * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        boneCounter++;
+      }
+    }
+
+    px.forEach((p, i) => {
+      const isTip = FINGERTIPS.includes(i);
+      ctx.save();
+      ctx.fillStyle = isTip ? '#fff8e7' : '#ede7f9';
+      ctx.shadowColor = isTip ? '#ffd166' : '#a78bfa';
+      ctx.shadowBlur = (isTip ? 16 : 8) + energyLevel * 6;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, (isTip ? 5.5 : 3.2) + energyLevel * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      if(showIndices){
+        ctx.save();
+        ctx.fillStyle = '#4cc9f0';
+        ctx.font = '10px "Space Grotesk", monospace';
+        ctx.fillText(String(i), p.x + 6, p.y - 6);
+        ctx.restore();
+      }
+    });
+  }
+
+  /* ---------------------------------------------------------------------
+   * 11. Energy tether — a braided, flickering lightning link between two
+   *     hands (replaces the old single dashed line) that reacts to
+   *     distance, and fires a merge burst when hands touch
+   * ------------------------------------------------------------------- */
+  const strandColors = ['#4cc9f0', '#a78bfa', '#ffd166'];
+
+  function drawEnergyTether(ctx, a, b, t){
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    const maxDist = canvas.width * 0.9;
+    if(dist > maxDist) return;
+
+    const proximity = 1 - Math.min(dist / maxDist, 1);
+    const segments = 8;
+    const strands = calmMode ? 1 : 3;
+
+    ctx.save();
+    for(let s = 0; s < strands; s++){
+      const seed = s * 13.7;
+      ctx.beginPath();
+      for(let k = 0; k <= segments; k++){
+        const f = k / segments;
+        const baseX = a.x + (b.x - a.x) * f;
+        const baseY = a.y + (b.y - a.y) * f;
+        const nx = -(b.y - a.y), ny = (b.x - a.x);
+        const nlen = Math.hypot(nx, ny) || 1;
+        const jitterMag = Math.sin(f * Math.PI) * (12 + proximity * 10);
+        const noise = Math.sin(t / 90 + seed + f * 10);
+        const ox = (nx / nlen) * jitterMag * noise;
+        const oy = (ny / nlen) * jitterMag * noise;
+        const x = baseX + ox, y = baseY + oy;
+        if(k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = strandColors[s % strandColors.length];
+      ctx.shadowColor = ctx.strokeStyle;
+      ctx.shadowBlur = 16;
+      ctx.globalAlpha = 0.35 + proximity * 0.4;
+      ctx.lineWidth = 1.4 + proximity * 1.5;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if(Math.random() < 0.2 + proximity * 0.4){
+      const f = Math.random();
+      spawnParticle(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, ['#4cc9f0', '#5eead4', '#ffd166'], 0.6);
+    }
+
+    if(dist < 60 && !tetherMerged){
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      burst(mid.x, mid.y, ['#ffd166', '#fff8e7', '#a78bfa', '#4cc9f0'], 40);
+      spawnShockwave(mid.x, mid.y, '#ffd166');
+      tetherMerged = true;
+    }else if(dist >= 90){
+      tetherMerged = false;
+    }
+  }
+
+  /* ---------------------------------------------------------------------
+   * 6. FPS counter
+   * ------------------------------------------------------------------- */
+  let lastFrameTime = performance.now();
+  let fpsSmoothed = 0;
+  function tickFps(){
+    const now = performance.now();
+    const dt = now - lastFrameTime;
+    lastFrameTime = now;
+    const instant = 1000 / Math.max(dt, 1);
+    fpsSmoothed = fpsSmoothed ? fpsSmoothed * 0.9 + instant * 0.1 : instant;
+    fpsVal.textContent = Math.round(fpsSmoothed);
+  }
+
+  /* ---------------------------------------------------------------------
+   * 7. Main results callback from MediaPipe Hands
+   * ------------------------------------------------------------------- */
+  let modelReady = false;
+
+  function onResults(results){
+    if(!modelReady){
+      modelReady = true;
+      loadingMsg.classList.add('hidden');
+      setStatus('live', true);
+    }
+
+    tickFps();
+
+    if(canvas.width !== results.image.width || canvas.height !== results.image.height){
+      canvas.width = results.image.width;
+      canvas.height = results.image.height;
+    }
+    const w = canvas.width, h = canvas.height;
+    const t = performance.now();
+
+    ctx.save();
+    ctx.clearRect(0, 0, w, h);
+
+    // mirror horizontally so movement matches what the student expects
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(results.image, 0, 0, w, h);
+
+    // subtle color-grade wash to unify the raw camera feed with the theme
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(18, 10, 40, 0.35)');
+    grad.addColorStop(1, 'rgba(9, 11, 20, 0.55)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // soft vignette so the frame feels like a scrying glass, not a raw feed
+    const vignette = ctx.createRadialGradient(w / 2, h / 2, h * 0.32, w / 2, h / 2, h * 0.8);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, w, h);
+
+    const handLandmarks = results.multiHandLandmarks || [];
+    handsVal.textContent = String(handLandmarks.length);
+
+    const trailLength = calmMode ? 4 : 10;
+    auraHue = (auraHue + 0.12 + (Math.max(energy[0], energy[1]) || 0) * 0.5) % 360;
+
+    const palmCenters = [];
+    let peakEnergy = 0;
+
+    handLandmarks.forEach((lm, i) => {
+      const px = lm.map(p => ({ x: p.x * w, y: p.y * h }));
+      const wrist = px[0], midMcp = px[9];
+      const handSize = Math.hypot(midMcp.x - wrist.x, midMcp.y - wrist.y) || 1;
+      const centroid = computeCentroid(px, CENTROID_INDICES);
+      const openness = computeOpenness(px, centroid, handSize);
+
+      const level = updateEnergy(i, px, handSize);
+      peakEnergy = Math.max(peakEnergy, level);
+      updateHistory(i, px, trailLength);
+      handleGestureTransitions(i, openness, centroid);
+      checkPinch(px, i, level);
+
+      if(!calmMode) drawMeshWeb(ctx, px, centroid, auraHue, level);
+      drawRuneCircle(ctx, centroid, handSize, openness, level, t);
+      if(!calmMode) drawFingertipTrails(ctx, i);
+      drawSkeleton(ctx, px, t, level);
+
+      palmCenters.push(centroid);
+
+      // ambient sparkle — busier the faster the hand is moving
+      const emitChance = 0.28 + Math.min(level * 0.4, 0.5);
+      if(Math.random() < emitChance){
+        const tip = px[FINGERTIPS[Math.floor(Math.random() * FINGERTIPS.length)]];
+        spawnParticle(tip.x, tip.y, ['#a78bfa', '#ffd166', '#5eead4'], 0.5 + level * 0.6);
+      }
+
+      // occasional ripple while a hand keeps moving fast
+      if(level > ENERGY_SHOCK_THRESHOLD && t - lastShockwaveTime[i] > 350){
+        spawnShockwave(centroid.x, centroid.y, FINGER_COLORS[i % FINGER_COLORS.length]);
+        lastShockwaveTime[i] = t;
+      }
+    });
+
+    if(palmCenters.length === 2){
+      drawEnergyTether(ctx, palmCenters[0], palmCenters[1], t);
+    }
+
+    energyVal.textContent = Math.round(Math.min(peakEnergy, 1) * 100) + '%';
+
+    updateAndDrawShockwaves(ctx);
+    updateAndDrawParticles(ctx);
+    ctx.restore();
+  }
+
+  /* ---------------------------------------------------------------------
+   * 8. Boot: set up MediaPipe Hands + camera
+   * ------------------------------------------------------------------- */
+  function boot(){
+    if(typeof Hands === 'undefined' || typeof Camera === 'undefined'){
+      showError('The hand-tracking library did not load. Check your internet connection and reload the page.');
+      return;
+    }
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.6
+    });
+    hands.onResults(onResults);
+
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      showError('This browser does not expose camera access on this page. Make sure you are viewing it via http://localhost, not as a double-clicked file, and try Chrome or Edge.');
+      return;
+    }
+
+    const camera = new Camera(videoEl, {
+      onFrame: async () => {
+        try{
+          await hands.send({ image: videoEl });
+        }catch(e){
+          console.error(e);
+        }
+      },
+      width: 960,
+      height: 720,
+      facingMode: "user"
+    });
+
+    camera.start().catch((err) => {
+      console.error(err);
+      let msg = 'Could not start the camera.';
+      if(err && err.name === 'NotAllowedError'){
+        msg = 'Camera permission was denied. Allow camera access for this page (check the icon in your address bar) and reload.';
+      }else if(err && err.name === 'NotFoundError'){
+        msg = 'No camera was found on this device.';
+      }else if(location.protocol === 'file:'){
+        msg = 'This page was opened directly as a file. Browsers block camera access unless the page is served over http(s). Run a local server and open it via http://localhost.';
+      }
+      showError(msg);
+    });
+  }
+
+  window.addEventListener('DOMContentLoaded', boot);
+})();
+</script>
+
+</body>
+</html>
